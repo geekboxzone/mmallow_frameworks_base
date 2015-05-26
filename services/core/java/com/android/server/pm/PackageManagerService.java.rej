@@ -1,0 +1,37 @@
+diff a/services/core/java/com/android/server/pm/PackageManagerService.java b/services/core/java/com/android/server/pm/PackageManagerService.java	(rejected hunks)
+@@ -17553,4 +17561,35 @@ public class PackageManagerService extends IPackageManager.Stub {
+             fixedThreadPool.shutdown();
+         }
+     }
++
++    /**
++     * @hide
++     */
++    public int getPackagePerformanceMode(String pkgName) {
++        for (int i=0; i<mSettings.mPerformancePackages.size(); i++) {
++            if (pkgName.toLowerCase().contains(mSettings.mPerformancePackages.get(i).name.toLowerCase())) {
++                return mSettings.mPerformancePackages.get(i).mode;
++            }
++        }
++        return PowerManager.PERFORMANCE_MODE_NORMAL;
++    }
++
++    /**
++     * @hide
++     */
++    public void setPackagePerformanceMode(String pkgName, int mode) {
++        PackagePerformanceSetting setting = null;
++        for (int i=0; i<mSettings.mPerformancePackages.size(); i++) {
++            if (mSettings.mPerformancePackages.get(i).name.equals(pkgName)) {
++                setting = mSettings.mPerformancePackages.get(i);
++            }
++        }
++        if (setting != null) {
++            setting.setMode(mode);
++        } else {
++            setting = new PackagePerformanceSetting(pkgName, mode);
++            mSettings.mPerformancePackages.add(0, setting);
++        }
++        mSettings.writeLPr();
++    }
+ }

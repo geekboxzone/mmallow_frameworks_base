@@ -32,6 +32,7 @@ import com.android.internal.os.BatteryStatsImpl;
 import com.android.server.Watchdog;
 import com.android.server.am.ActivityManagerService.ItemMatcher;
 import com.android.server.am.ActivityStackSupervisor.ActivityContainer;
+import com.android.server.power.DevicePerformanceTunner;
 import com.android.server.wm.AppTransition;
 import com.android.server.wm.TaskGroup;
 import com.android.server.wm.WindowManagerService;
@@ -76,6 +77,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import android.os.SystemProperties;
 
 /**
  * State and management of a single stack of activities.
@@ -1749,6 +1751,7 @@ final class ActivityStack {
         if (DEBUG_SWITCH) Slog.v(TAG_SWITCH, "Resuming " + next);
 	mResumingActivity = next;
 
+        adjustPackagePerformanceMode();
         // If we are currently pausing an activity, then don't do anything
         // until that is done.
         if (!mStackSupervisor.allPausedActivitiesComplete()) {
@@ -4464,6 +4467,20 @@ final class ActivityStack {
     void onLockTaskPackagesUpdatedLocked() {
         for (int taskNdx = mTaskHistory.size() - 1; taskNdx >= 0; --taskNdx) {
             mTaskHistory.get(taskNdx).setLockTaskAuth();
+        }
+    }
+
+    private void adjustPackagePerformanceMode() {
+        if (mService.mUsePerformanceTunner) {
+            int mode = mService.getFrontActivityPerformanceModeLocked(false);
+            mService.mDevicePerformanceTunner.setPerformanceMode(mode);
+        }
+
+    }
+
+    public void forcePerformanceMode(int mode) {
+        if (mService.mUsePerformanceTunner) {
+            mService.mDevicePerformanceTunner.setPerformanceMode(mode);
         }
     }
 }

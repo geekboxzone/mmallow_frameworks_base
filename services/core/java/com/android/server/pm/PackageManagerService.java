@@ -157,6 +157,7 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.Parcel;
 import android.os.ParcelFileDescriptor;
+import android.os.PowerManager;
 import android.os.Process;
 import android.os.RemoteCallbackList;
 import android.os.RemoteException;
@@ -14975,6 +14976,7 @@ public class PackageManagerService extends IPackageManager.Stub {
         public static final int DUMP_INSTALLS = 1 << 13;
         public static final int DUMP_INTENT_FILTER_VERIFIERS = 1 << 14;
         public static final int DUMP_DOMAIN_PREFERRED = 1 << 15;
+        public static final int DUMP_PERF_MODE = 1 << 16;
 
         public static final int OPTION_SHOW_FILTERS = 1 << 0;
 
@@ -15185,6 +15187,8 @@ public class PackageManagerService extends IPackageManager.Stub {
                     pw.println("Settings written.");
                     return;
                 }
+            } else if ("perf".equals(cmd)) {
+                dumpState.setDump(DumpState.DUMP_PERF_MODE);
             }
         }
 
@@ -15492,6 +15496,10 @@ public class PackageManagerService extends IPackageManager.Stub {
                 // the given package is involved with.
                 if (dumpState.onTitlePrinted()) pw.println();
                 mInstallerService.dump(new IndentingPrintWriter(pw, "  ", 120));
+            }
+
+            if (dumpState.isDumping(DumpState.DUMP_PERF_MODE) && packageName == null) {
+                mSettings.dumpPackagePerformanceMode(pw, dumpState);
             }
 
             if (!checkin && dumpState.isDumping(DumpState.DUMP_MESSAGES) && packageName == null) {
@@ -16985,5 +16993,36 @@ public class PackageManagerService extends IPackageManager.Stub {
             throw new SecurityException(
                     "Cannot call " + tag + " from UID " + callingUid);
         }
+    }
+   
+    /**
+     * @hide
+     */
+    public int getPackagePerformanceMode(String pkgName) {
+        for (int i=0; i<mSettings.mPerformancePackages.size(); i++) {
+            if (pkgName.toLowerCase().contains(mSettings.mPerformancePackages.get(i).name.toLowerCase())) {
+                return mSettings.mPerformancePackages.get(i).mode;
+            }
+        }
+        return PowerManager.PERFORMANCE_MODE_NORMAL;
+    }
+
+    /**
+     * @hide
+     */
+    public void setPackagePerformanceMode(String pkgName, int mode) {
+        PackagePerformanceSetting setting = null;
+        for (int i=0; i<mSettings.mPerformancePackages.size(); i++) {
+            if (mSettings.mPerformancePackages.get(i).name.equals(pkgName)) {
+                setting = mSettings.mPerformancePackages.get(i);
+            }
+        }
+        if (setting != null) {
+            setting.setMode(mode);
+        } else {
+            setting = new PackagePerformanceSetting(pkgName, mode);
+            mSettings.mPerformancePackages.add(0, setting);
+        }
+        mSettings.writeLPr();
     }
 }

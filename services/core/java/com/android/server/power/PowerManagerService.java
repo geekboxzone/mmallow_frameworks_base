@@ -456,6 +456,8 @@ public final class PowerManagerService extends SystemService
     private final ArrayList<PowerManagerInternal.LowPowerModeListener> mLowPowerModeListeners
             = new ArrayList<PowerManagerInternal.LowPowerModeListener>();
 
+    private int mPerformanceMode = PowerManager.PERFORMANCE_MODE_NORMAL;
+
     private native void nativeInit();
 
     private static native void nativeAcquireSuspendBlocker(String name);
@@ -3287,6 +3289,22 @@ public final class PowerManagerService extends SystemService
             } finally {
                 Binder.restoreCallingIdentity(ident);
             }
+        }
+
+        public void setPerformanceMode(int mode) {
+            final long ident = Binder.clearCallingIdentity();
+                if (mPerformanceMode != mode) {
+                    mPerformanceMode = mode;
+                    BackgroundThread.getHandler().post(new Runnable() {
+                        @Override
+                        public void run() {
+                            Intent intent = new Intent(PowerManager.ACTION_PERFORMANCE_MODE_CHANGED)
+                                    .putExtra(PowerManager.EXTRA_PERFORMANCE_MODE, mPerformanceMode)
+                                    .addFlags(Intent.FLAG_RECEIVER_REGISTERED_ONLY | Intent.FLAG_RECEIVER_REPLACE_PENDING);
+                            mContext.sendBroadcast(intent);
+                        }
+                    });
+                }
         }
 
         /**

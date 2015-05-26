@@ -509,4 +509,7 @@ interface IPackageManager {
     boolean isPermissionRevokedByPolicy(String permission, String packageName, int userId);
 
     String getPermissionControllerPackageName();
+
+    int getPackagePerformanceMode(String pkgName);
+    void setPackagePerformanceMode(String pkgName, int mode);
 }
