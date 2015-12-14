@@ -72,6 +72,7 @@ public class PhoneStatusBarPolicy implements Callback {
     private final HotspotController mHotspot;
     private final AlarmManager mAlarmManager;
     private final UserInfoController mUserInfoController;
+    private final AudioManager mAudioManager;
 
     // Assume it's all good unless we hear otherwise.  We don't always seem
     // to get broadcasts that it *is* there.
@@ -106,7 +107,10 @@ public class PhoneStatusBarPolicy implements Callback {
             else if (action.equals(TelecomManager.ACTION_CURRENT_TTY_MODE_CHANGED)) {
                 updateTTY(intent);
             }
-        }
+            else if (action.equals(Intent.ACTION_HEADSET_PLUG)) {
+                updateHeadset(intent);
+            }
+       }
     };
 
     private Runnable mRemoveCastIconRunnable = new Runnable() {
@@ -127,7 +131,7 @@ public class PhoneStatusBarPolicy implements Callback {
         mService = (StatusBarManager) context.getSystemService(Context.STATUS_BAR_SERVICE);
         mAlarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         mUserInfoController = userInfoController;
-
+        mAudioManager = (AudioManager)context.getSystemService(Context.AUDIO_SERVICE);
         // listen for broadcasts
         IntentFilter filter = new IntentFilter();
         filter.addAction(AlarmManager.ACTION_NEXT_ALARM_CLOCK_CHANGED);
@@ -135,6 +139,7 @@ public class PhoneStatusBarPolicy implements Callback {
         filter.addAction(AudioManager.INTERNAL_RINGER_MODE_CHANGED_ACTION);
         filter.addAction(TelephonyIntents.ACTION_SIM_STATE_CHANGED);
         filter.addAction(TelecomManager.ACTION_CURRENT_TTY_MODE_CHANGED);
+        filter.addAction(Intent.ACTION_HEADSET_PLUG);
         mContext.registerReceiver(mIntentReceiver, filter, null, mHandler);
 
         // listen for user / profile change.
@@ -179,6 +184,11 @@ public class PhoneStatusBarPolicy implements Callback {
         mService.setIcon(SLOT_MANAGED_PROFILE, R.drawable.stat_sys_managed_profile_status, 0,
                 mContext.getString(R.string.accessibility_managed_profile));
         mService.setIconVisibility(SLOT_MANAGED_PROFILE, false);
+
+        //headset
+        mService.setIcon("headset", R.drawable.stat_sys_headset, 0, null);
+        mService.setIconVisibility("headset", false );
+
     }
 
     public void setZenMode(int zen) {
@@ -186,6 +196,11 @@ public class PhoneStatusBarPolicy implements Callback {
         updateVolumeZen();
     }
 
+    private final void updateHeadset(Intent intent) {
+        boolean isWiredHeadsetOn = mAudioManager.isWiredHeadsetOn();
+        Log.v(TAG, "updateHeadset: isWiredHeadsetOn=" + isWiredHeadsetOn);
+        mService.setIconVisibility("headset", isWiredHeadsetOn);
+    }
     private void updateAlarm() {
         final AlarmClockInfo alarm = mAlarmManager.getNextAlarmClock(UserHandle.USER_CURRENT);
         final boolean hasAlarm = alarm != null && alarm.getTriggerTime() > 0;
