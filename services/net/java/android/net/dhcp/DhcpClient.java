@@ -57,6 +57,8 @@ import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Random;
+import java.util.List;
+import java.util.ArrayList;
 
 import libcore.io.IoBridge;
 
@@ -176,6 +178,8 @@ public class DhcpClient extends BaseDhcpStateMachine {
     private State mWaitBeforeStartState = new WaitBeforeStartState(mDhcpInitState);
     private State mWaitBeforeRenewalState = new WaitBeforeRenewalState(mDhcpRenewingState);
 
+    private List<BroadcastReceiver> mList = new ArrayList<BroadcastReceiver>();
+
     private DhcpClient(Context context, StateMachine controller, String iface) {
         super(TAG);
 
@@ -198,13 +202,11 @@ public class DhcpClient extends BaseDhcpStateMachine {
             addState(mDhcpRebootingState, mDhcpState);
 
         setInitialState(mStoppedState);
-
         mAlarmManager = (AlarmManager) mContext.getSystemService(Context.ALARM_SERVICE);
         IBinder b = ServiceManager.getService(Context.NETWORKMANAGEMENT_SERVICE);
         mNMService = INetworkManagementService.Stub.asInterface(b);
 
         mRandom = new Random();
-
         // Used to schedule packet retransmissions.
         mKickIntent = createStateMachineCommandIntent("KICK", CMD_KICK);
         // Used to time out PacketRetransmittingStates.
@@ -252,17 +254,21 @@ public class DhcpClient extends BaseDhcpStateMachine {
         intent.setPackage(mContext.getPackageName());
         PendingIntent pendingIntent =  PendingIntent.getBroadcast(mContext, cmd, intent, 0);
 
-        mContext.registerReceiver(
+        BroadcastReceiver mb = 
             new BroadcastReceiver() {
                 @Override
                 public void onReceive(Context context, Intent intent) {
                     sendMessage(cmd);
                 }
-            },
+            };
+
+        mContext.registerReceiver(
+            mb,
             new IntentFilter(action),
             android.Manifest.permission.CONNECTIVITY_INTERNAL,
             null);
 
+        mList.add(mb);
         return pendingIntent;
     }
 
@@ -460,6 +466,9 @@ public class DhcpClient extends BaseDhcpStateMachine {
     @Override
     public void doQuit() {
         Log.d(TAG, "doQuit");
+        for(BroadcastReceiver mb:mList){
+            mContext.unregisterReceiver(mb);
+        }
         quit();
     }
 
