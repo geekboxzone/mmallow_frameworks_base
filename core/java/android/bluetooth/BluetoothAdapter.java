@@ -2044,12 +2044,17 @@ public final class BluetoothAdapter {
     }
 
     protected void finalize() throws Throwable {
+        super.finalize(); 
+    }
+    /**
+     * @hide
+     */
+     public void unregisterAdapter(){
         try {
+			Log.e(TAG, "unregisterAdapter() mManagerCallback:"+mManagerCallback);
             mManagerService.unregisterAdapter(mManagerCallback);
         } catch (RemoteException e) {
             Log.e(TAG, "", e);
-        } finally {
-            super.finalize();
         }
     }
 

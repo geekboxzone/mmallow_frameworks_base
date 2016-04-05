@@ -284,7 +284,9 @@ public final class BluetoothHeadset implements BluetoothProfile {
 
     void doUnbind() {
         synchronized (mConnection) {
-            if (mService != null) {
+			Log.i(TAG, "****doUnbind mService"+mService);
+            //if (mService != null) 
+			{
                 try {
                     mAdapter.getBluetoothManager().unbindBluetoothProfileService(
                             BluetoothProfile.HEADSET, mConnection);
