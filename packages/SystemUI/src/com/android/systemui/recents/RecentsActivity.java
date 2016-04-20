@@ -398,6 +398,14 @@ public class RecentsActivity extends Activity implements RecentsView.RecentsView
 		}
 		mDismissAllTaskLinearLayout.setLayoutParams(layoutParams);
 
+		mDismissAllTaskLinearLayout.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mRecentsView.dismissAllTask();
+                dismissRecentsToHome(true);
+            }
+        });
+
 		mDismissAllTaskButton = (ImageView) findViewById(R.id.close_icon);
         mDismissAllTaskButton.setOnClickListener(new OnClickListener() {
             @Override
