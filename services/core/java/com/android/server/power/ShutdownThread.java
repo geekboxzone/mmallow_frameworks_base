@@ -53,6 +53,11 @@ import com.android.server.pm.PackageManagerService;
 
 import android.util.Log;
 import android.view.WindowManager;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -94,6 +99,7 @@ public final class ShutdownThread extends Thread {
     private static boolean mReboot;
     private static boolean mRebootSafeMode;
     private static boolean mRebootUpdate;
+    private static boolean mReboot2Linux;
     private static String mRebootReason;
 
     // Provides shutdown assurance in case the system_server is killed
@@ -135,6 +141,7 @@ public final class ShutdownThread extends Thread {
     public static void shutdown(final Context context, boolean confirm) {
         mReboot = false;
         mRebootSafeMode = false;
+        mReboot2Linux = false;
         shutdownInner(context, confirm);
     }
 
@@ -219,6 +226,20 @@ public final class ShutdownThread extends Thread {
         mReboot = true;
         mRebootSafeMode = false;
         mRebootUpdate = false;
+        mReboot2Linux = false;
+        mRebootReason = reason;
+        shutdownInner(context, confirm);
+    }
+
+    public static void rebootLinuxOS(final Context context, String reason, boolean confirm) {
+        try {
+            Runtime.getRuntime().exec("reboot ramfs");
+        } catch (IOException ioe) {
+            throw new RuntimeException("Error running command reboot ramfs", ioe);
+        }
+        mReboot = true;
+        mRebootSafeMode = false;
+        mReboot2Linux = true;
         mRebootReason = reason;
         shutdownInner(context, confirm);
     }
@@ -239,6 +260,7 @@ public final class ShutdownThread extends Thread {
         mReboot = true;
         mRebootSafeMode = true;
         mRebootUpdate = false;
+        mReboot2Linux = false;
         mRebootReason = null;
         shutdownInner(context, confirm);
     }
@@ -306,9 +328,9 @@ public final class ShutdownThread extends Thread {
                 pd.setIndeterminate(false);
             } else {
                 // Factory reset path. Set the dialog message accordingly.
-                pd.setTitle(context.getText(com.android.internal.R.string.reboot_to_reset_title));
+                pd.setTitle(context.getText(mReboot2Linux ? com.android.internal.R.string.reboot2linux : com.android.internal.R.string.reboot));
                 pd.setMessage(context.getText(
-                        com.android.internal.R.string.reboot_to_reset_message));
+                        mReboot2Linux ? com.android.internal.R.string.reboot2linux_progress : com.android.internal.R.string.reboot_progress));
                 pd.setIndeterminate(true);
             }
         } else {
