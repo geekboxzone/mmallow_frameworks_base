@@ -15770,15 +15770,6 @@ public final class ActivityManagerService extends ActivityManagerNative
             restart = true;
         }
 
-	if((("true".equals(SystemProperties.get("ro.config.low_ram", "false")))||("true".equals(SystemProperties.get("ro.mem_optimise.enable", "false")))) && (!"true".equals(SystemProperties.get("sys.cts_gts.status", "false"))))//if lowmem config
-	{
-		if((!"com.android.systemui".equals(app.processName))&&(!"android.process.media".equals(app.processName)))
-		{
-			if(DEBUG_LOWMEM)Slog.d("xzj","---low mem mode,skip restart crashed app= "+app);
-			restart = false;
-		}
-	}
-
         // Unregister from connected content providers.
         if (!app.conProviders.isEmpty()) {
             for (int i = app.conProviders.size() - 1; i >= 0; i--) {
@@ -15870,6 +15861,15 @@ public final class ActivityManagerService extends ActivityManagerNative
         }
         if (app == mPreviousProcess) {
             mPreviousProcess = null;
+        }
+        if((("true".equals(SystemProperties.get("ro.config.low_ram", "false")))||("true".equals(SystemProperties.get("ro.mem_optimise.enable", "false")))) 
+            && (!"true".equals(SystemProperties.get("sys.cts_gts.status", "false"))))//if lowmem config
+        {
+            if((!"com.android.systemui".equals(app.processName))&&(!"android.process.media".equals(app.processName)))
+            {     
+                if(DEBUG_LOWMEM)Slog.d("xzj","---low mem mode,skip restart crashed app= "+app);
+                 restart = false;
+            }     
         }
 
         if (restart && !app.isolated) {
@@ -19416,7 +19416,8 @@ public final class ActivityManagerService extends ActivityManagerNative
                         } else {
                             numEmpty++;
                             if (numEmpty > emptyProcessLimit) {
-				if((!"com.android.phone".equals(app.processName))&&(!"android.process.media".equals(app.processName)))//do not kill phone, which would cause 3g dongle can not use, do not kill media which would cause mediaprovider stale
+				if((!"com.android.phone".equals(app.processName))&&(!"android.process.media".equals(app.processName))
+                    &&(!"com.cghs.stresstest".equals(app.processName)))//do not kill phone, which would cause 3g dongle can not use, do not kill media which would cause mediaprovider stale
 					app.kill("empty #" + numEmpty, true);
                             }
                         }
