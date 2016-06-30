@@ -537,7 +537,12 @@ final class DefaultPermissionGrantPolicy {
                     voiceRecoIntent, userId);
             if (voiceRecoPackage != null
                     && doesPackageSupportRuntimePermissions(voiceRecoPackage)) {
-                grantRuntimePermissionsLPw(voiceRecoPackage, MICROPHONE_PERMISSIONS, userId);
+		if(voiceRecoPackage.toString().contains("com.google.android.googlequicksearchbox"))
+		{   
+			Log.d("xzj","skipp to add MICROPHONE_PERMISSIONS to com.google.android.googlequicksearchbox");
+		} 
+		else
+                	grantRuntimePermissionsLPw(voiceRecoPackage, MICROPHONE_PERMISSIONS, userId);
             }
 
             // Location
