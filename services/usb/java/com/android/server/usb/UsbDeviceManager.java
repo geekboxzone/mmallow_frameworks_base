@@ -123,7 +123,7 @@ public class UsbDeviceManager {
 
     // Timeout for entering USB request mode.
     // Request is cancelled if host does not configure device within 10 seconds.
-    private static final int ACCESSORY_REQUEST_TIMEOUT = 10 * 1000;
+    private static final int ACCESSORY_REQUEST_TIMEOUT = 10 * 1000 * 2;
 
     private static final String BOOT_MODE_PROPERTY = "ro.bootmode";
 
