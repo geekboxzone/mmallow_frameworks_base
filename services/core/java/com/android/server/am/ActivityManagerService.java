@@ -1305,6 +1305,7 @@ public final class ActivityManagerService extends ActivityManagerNative
     final Map<String,String> mGameMap     =new HashMap<String,String>(); //games,need to do memory cleanup
     final ArrayList<String> mExcludePrevApp = new ArrayList<String>();   //process which would not stop when go to pause
     final ArrayList<String> mExcludeNextApp = new ArrayList<String>();   //process which would not pause prev app when starting
+    final ArrayList<String> mExcludeEmptyApp = new ArrayList<String>();   //process which would not being killed when empty
 		 
     private final class AppDeathRecipient implements IBinder.DeathRecipient {
         final ProcessRecord mApp;
@@ -2495,6 +2496,15 @@ public final class ActivityManagerService extends ActivityManagerNative
                                         		if(DEBUG_LOWMEM)Slog.d("xzj","---add filter nextApp "+nextName);
                                         	}
                                 	}
+					else if("empty".equals(tag))	
+					{
+						String emptyName = parser.getAttributeValue(null, "package");
+						if(emptyName!=null)
+						{
+							mExcludeEmptyApp.add(emptyName);
+							if(DEBUG_LOWMEM)Slog.d("xzj","---add filter emptyApp "+emptyName);
+						}
+					}
 				}
           		} while (type != XmlPullParser.END_DOCUMENT);
       		} catch (NullPointerException e) {
@@ -19404,7 +19414,22 @@ public final class ActivityManagerService extends ActivityManagerNative
                         mNumCachedHiddenProcs++;
                         numCached++;
                         if (numCached > cachedProcessLimit) {
-                            app.kill("cached #" + numCached, true);
+			    int count = mExcludeEmptyApp.size();
+			    boolean mExclude = false;
+			    if(("true".equals(SystemProperties.get("ro.config.low_ram", "false")))
+					    ||("true".equals(SystemProperties.get("ro.mem_optimise.enable", "false"))))
+			    {
+			    	for (int k=0; k<count; k++) {
+			    		if(app.processName != null && app.processName.contains(mExcludeEmptyApp.get(k)))
+			    	        {
+			    	        	if(DEBUG_LOWMEM)Slog.d("xzj","------shouldExcludeCachedApp App= "+app.processName);
+			    	    		mExclude = true;
+			    	    		break;
+			    	        }
+			    	}
+			    }
+			    if(!mExclude)//do not kill phone, which would cause 3g dongle can not use, do not kill media which would cause mediaprovider stale
+                            	app.kill("cached #" + numCached, true);
                         }
                         break;
                     case ActivityManager.PROCESS_STATE_CACHED_EMPTY:
@@ -19416,8 +19441,22 @@ public final class ActivityManagerService extends ActivityManagerNative
                         } else {
                             numEmpty++;
                             if (numEmpty > emptyProcessLimit) {
-				if((!"com.android.phone".equals(app.processName))&&(!"android.process.media".equals(app.processName))
-                    &&(!"com.cghs.stresstest".equals(app.processName)))//do not kill phone, which would cause 3g dongle can not use, do not kill media which would cause mediaprovider stale
+			    	int count = mExcludeEmptyApp.size();
+				boolean mExclude = false;
+				if(("true".equals(SystemProperties.get("ro.config.low_ram", "false")))
+						||("true".equals(SystemProperties.get("ro.mem_optimise.enable", "false"))))
+				{
+					for (int k=0; k<count; k++) {
+						if(app.processName != null && app.processName.contains(mExcludeEmptyApp.get(k)))
+						{
+							if(DEBUG_LOWMEM)Slog.d("xzj","------shouldExcludeEmptyApp App= "+app.processName);
+							mExclude = true;
+							break;
+						}
+					}
+				}
+
+				if(!mExclude)//do not kill phone, which would cause 3g dongle can not use, do not kill media which would cause mediaprovider stale
 					app.kill("empty #" + numEmpty, true);
                             }
                         }
