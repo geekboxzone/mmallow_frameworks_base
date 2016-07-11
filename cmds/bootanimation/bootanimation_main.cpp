@@ -23,14 +23,14 @@
 #include <sys/resource.h>
 #include <utils/Log.h>
 #include <utils/threads.h>
-
+#include <unistd.h>
 #include "BootAnimation.h"
 
 using namespace android;
 
 // ---------------------------------------------------------------------------
 
-int main()
+int main(int argc, char **argv)
 {
     setpriority(PRIO_PROCESS, 0, ANDROID_PRIORITY_DISPLAY);
 
@@ -44,8 +44,14 @@ int main()
         ProcessState::self()->startThreadPool();
 
         // create the boot animation object
-        sp<BootAnimation> boot = new BootAnimation();
-
+        sp<BootAnimation> boot;
+        if(argc > 1){
+            if(strcmp(argv[1], "shutdown") == 0){
+                boot = new BootAnimation(true);
+            }
+        }else{
+            boot = new BootAnimation(false);
+        }
         IPCThreadState::self()->joinThreadPool();
 
     }

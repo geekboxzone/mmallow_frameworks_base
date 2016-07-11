@@ -16,6 +16,7 @@
 
 package com.android.server;
 
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -25,10 +26,14 @@ import android.os.Message;
 import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
 import android.os.UEventObserver;
+import android.os.SystemProperties;
+import android.os.ServiceManager;
 import android.util.Slog;
 import android.media.AudioManager;
 import android.util.Log;
 import android.view.InputDevice;
+import android.view.WindowManager;
+import android.view.IWindowManager;
 
 import com.android.internal.R;
 import com.android.server.input.InputManagerService;
@@ -104,6 +109,21 @@ final class WiredAccessoryManager implements WiredAccessoryCallbacks {
                 context.getResources().getBoolean(R.bool.config_useDevInputEventForAudioJack);
 
         mObserver = new WiredAccessoryObserver();
+        context.registerReceiver(new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context ctx, Intent intent) {
+
+                boolean fastfoodenable = SystemProperties.getBoolean("persist.sys.rkrotation", false);
+                if(fastfoodenable){
+                    try{
+                        IWindowManager wm = IWindowManager.Stub.asInterface(ServiceManager.getService(Context.WINDOW_SERVICE));
+                        wm.thawRotation();
+                    } catch (Exception e) {
+                    }
+                }
+            }
+        },new IntentFilter(Intent.ACTION_BOOT_COMPLETED), null, null);
+
     }
 
     private void onSystemReady() {

@@ -57,28 +57,43 @@
 #include "BootAnimation.h"
 #include "AudioPlayer.h"
 
+#include <media/mediaplayer.h>
+#include <media/AudioSystem.h>
+#include <media/IMediaHTTPService.h>
+
 #define OEM_BOOTANIMATION_FILE "/oem/media/bootanimation.zip"
 #define SYSTEM_BOOTANIMATION_FILE "/system/media/bootanimation.zip"
 #define SYSTEM_ENCRYPTED_BOOTANIMATION_FILE "/system/media/bootanimation-encrypted.zip"
 #define EXIT_PROP_NAME "service.bootanim.exit"
 
+
+#define SHUTDOWNMUSIC_FILE "/system/media/audio/shutdown.wav"
+
+#define USER_SHUTDOWN_ANIMATION_FILE "/data/local/shutdownanimation.zip"
+#define USER_BOOTANIMATION_FILE "/data/local/bootanimation.zip"
+#define SYSTEM_SHUTDOWN_ANIMATION_FILE "/system/media/shutdownanimation.zip"
 namespace android {
 
 static const int ANIM_ENTRY_NAME_MAX = 256;
+const char* startup_ring = "/system/media/audio/startup.wav";
+const char* shutdown_ring = "/system/media/audio/shutdown.wav";
 
 // ---------------------------------------------------------------------------
 
-BootAnimation::BootAnimation() : Thread(false), mZip(NULL)
+BootAnimation::BootAnimation(bool shutdown) : Thread(false), mZip(NULL)
 {
     mSession = new SurfaceComposerClient();
+    mShutdown = shutdown;
 }
-
 BootAnimation::~BootAnimation() {
     if (mZip != NULL) {
         delete mZip;
     }
 }
 
+void BootAnimation::isShutdown(bool shutdown){
+    mShutdown = shutdown;
+}
 void BootAnimation::onFirstRef() {
     status_t err = mSession->linkToComposerDeath(this);
     ALOGE_IF(err, "linkToComposerDeath failed (%s) ", strerror(-err));
@@ -290,6 +305,7 @@ status_t BootAnimation::readyToRun() {
     bool encryptedAnimation = atoi(decrypt) != 0 || !strcmp("trigger_restart_min_framework", decrypt);
 
     ZipFileRO* zipFile = NULL;
+
     if ((encryptedAnimation &&
             (access(SYSTEM_ENCRYPTED_BOOTANIMATION_FILE, R_OK) == 0) &&
             ((zipFile = ZipFileRO::open(SYSTEM_ENCRYPTED_BOOTANIMATION_FILE)) != NULL)) ||
@@ -301,6 +317,20 @@ status_t BootAnimation::readyToRun() {
             ((zipFile = ZipFileRO::open(SYSTEM_BOOTANIMATION_FILE)) != NULL))) {
         mZip = zipFile;
     }
+    /* show boot animation*/
+    if(!mShutdown){
+        if(((access(USER_BOOTANIMATION_FILE, R_OK) == 0) && ((zipFile = ZipFileRO::open(USER_BOOTANIMATION_FILE)) != NULL)) || ((access(SYSTEM_BOOTANIMATION_FILE, R_OK) == 0) && ( (zipFile = ZipFileRO::open(SYSTEM_BOOTANIMATION_FILE) ) != NULL) ) )
+        {
+                mZip = zipFile;
+        }
+    }
+    /*show shutdown animation*/
+    else{
+        if(((access(USER_SHUTDOWN_ANIMATION_FILE, R_OK) == 0) && ((zipFile = ZipFileRO::open(USER_SHUTDOWN_ANIMATION_FILE) ) != NULL))|| ( (access(SYSTEM_SHUTDOWN_ANIMATION_FILE, R_OK) == 0) && ((zipFile = ZipFileRO::open(SYSTEM_SHUTDOWN_ANIMATION_FILE) ) != NULL))) 
+        {
+                mZip = zipFile;
+        }
+    }
 
     return NO_ERROR;
 }
@@ -310,12 +340,12 @@ bool BootAnimation::threadLoop()
     bool r;
     // We have no bootanimation file, so we use the stock android logo
     // animation.
+    playMusic();
     if (mZip == NULL) {
         r = android();
     } else {
         r = movie();
     }
-
     eglMakeCurrent(mDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
     eglDestroyContext(mDisplay, mContext);
     eglDestroySurface(mDisplay, mSurface);
@@ -324,6 +354,37 @@ bool BootAnimation::threadLoop()
     eglTerminate(mDisplay);
     IPCThreadState::self()->stopProcess();
     return r;
+}
+void BootAnimation::playMusic(){
+
+    if(!mShutdown){
+        // play startup rington
+        if(access(startup_ring, R_OK) == 0)
+        {
+            ALOGD("startup_ring file can access");
+            property_set("ctl.start", "startup_rington");
+            ALOGD("ctl.start startup_rington");
+        }
+        else
+        {
+            ALOGD("startup_ring file can not access");
+        }
+    }else{
+        AudioSystem::setStreamVolumeIndex(AUDIO_STREAM_MUSIC, 1, AUDIO_DEVICE_OUT_DEFAULT);
+        int volumnIndex;
+        AudioSystem::getStreamVolumeIndex(AUDIO_STREAM_RING, &volumnIndex, AUDIO_DEVICE_OUT_DEFAULT);
+
+        sp<MediaPlayer> mp = new MediaPlayer();
+        if((0 == access(SHUTDOWNMUSIC_FILE, F_OK)) && mp != NULL){
+            mp->setDataSource(NULL, SHUTDOWNMUSIC_FILE, NULL);
+            mp->setAudioStreamType(AUDIO_STREAM_ENFORCED_AUDIBLE);
+            mp->prepare();
+            mp->seekTo(0);
+            mp->start();
+        }else{
+            ALOGE("shutdown music file can not access");
+        }
+    }
 }
 
 bool BootAnimation::android()
@@ -393,6 +454,10 @@ bool BootAnimation::android()
 
 
 void BootAnimation::checkExit() {
+    if(mShutdown){
+        return ;
+    }
+
     // Allow surface flinger to gracefully request shutdown
     char value[PROPERTY_VALUE_MAX];
     property_get(EXIT_PROP_NAME, value, "0");

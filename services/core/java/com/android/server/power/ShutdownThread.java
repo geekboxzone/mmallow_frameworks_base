@@ -44,6 +44,7 @@ import android.os.Vibrator;
 import android.os.SystemVibrator;
 import android.os.storage.IMountService;
 import android.os.storage.IMountShutdownObserver;
+import android.os.SystemProperties;
 import android.system.ErrnoException;
 import android.system.Os;
 
@@ -57,6 +58,11 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+
+import android.view.IWindowManager;
+
+import android.content.ContentResolver;
+import android.provider.Settings;
 
 public final class ShutdownThread extends Thread {
     // constants
@@ -75,7 +81,7 @@ public final class ShutdownThread extends Thread {
     private static final int MOUNT_SERVICE_STOP_PERCENT = 20;
 
     // length of vibration before shutting down
-    private static final int SHUTDOWN_VIBRATE_MS = 500;
+    private static final int SHUTDOWN_VIBRATE_MS = 2000;
 
     // state tracking
     private static Object sIsStartedGuard = new Object();
@@ -246,7 +252,33 @@ public final class ShutdownThread extends Thread {
             sIsStarted = true;
         }
 
+
+        boolean showShutdownAnim = (new File("/system/media/shutdownanimation.zip").exists() || new File("/data/local/shutdownanimation.zip").exists());
         // Throw up a system dialog to indicate the device is rebooting / shutting down.
+        if (showShutdownAnim){
+            try {
+                int autoRotateOn = Settings.System.getInt(context.getContentResolver(),Settings.System.ACCELEROMETER_ROTATION,1);
+                if(autoRotateOn == 1){
+                    SystemProperties.set("persist.sys.rkrotation", "true");
+                }else{
+		            SystemProperties.set("persist.sys.rkrotation", "false");
+		        }
+                IWindowManager wm = IWindowManager.Stub.asInterface(
+                    ServiceManager.getService(Context.WINDOW_SERVICE));
+                wm.getRotation();
+                //if(wm.getRotation() == 0 || wm.getRotation() == 2){
+                //    wm.freezeRotation(0);
+                //}else{
+                //    wm.freezeRotation(3);
+                //}
+                wm.freezeRotation(0);
+               // wm.thawRotation();
+            } catch (Exception e) {
+                Log.e(TAG, e.toString());
+            }
+
+            android.os.SystemProperties.set("ctl.start", "shutdownanim");
+        }else{
         ProgressDialog pd = new ProgressDialog(context);
 
         // Path 1: Reboot to recovery and install the update
@@ -287,9 +319,10 @@ public final class ShutdownThread extends Thread {
         pd.setCancelable(false);
         pd.getWindow().setType(WindowManager.LayoutParams.TYPE_KEYGUARD_DIALOG);
 
-        pd.show();
+            pd.show();
 
         sInstance.mProgressDialog = pd;
+        }
         sInstance.mContext = context;
         sInstance.mPowerManager = (PowerManager)context.getSystemService(Context.POWER_SERVICE);
 

@@ -40,11 +40,14 @@ class SurfaceControl;
 class BootAnimation : public Thread, public IBinder::DeathRecipient
 {
 public:
-                BootAnimation();
+                BootAnimation(bool shutdown);
     virtual     ~BootAnimation();
 
     sp<SurfaceComposerClient> session() const;
 
+    bool mShutdown;
+    void isShutdown(bool shutdown);
+    void playMusic();
 private:
     virtual bool        threadLoop();
     virtual status_t    readyToRun();
