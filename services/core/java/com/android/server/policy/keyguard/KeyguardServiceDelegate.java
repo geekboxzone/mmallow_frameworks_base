@@ -149,7 +149,7 @@ public class KeyguardServiceDelegate {
 
     private boolean isBox() {
         String boxString = android.os.SystemProperties.get("ro.target.product");
-        boolean isBox = "box".equals(boxString);
+        boolean isBox = "box".equals(boxString)||"vr".equals(boxString);
         return isBox;
     }
 

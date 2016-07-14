@@ -577,6 +577,15 @@ final class DefaultPermissionGrantPolicy {
                 grantRuntimePermissionsLPw(musicPackage, STORAGE_PERMISSIONS, userId);
             }
 
+             //rk RockVideoPlayer
+            if("vr".equals(android.os.SystemProperties.get("ro.target.product","tablet"))){
+                PackageParser.Package rockVideoPackage = getSystemPackageLPr("com.rockchip.vr");
+                if (rockVideoPackage != null
+                        && doesPackageSupportRuntimePermissions(rockVideoPackage)) {
+                    grantRuntimePermissionsLPw(rockVideoPackage, PHONE_PERMISSIONS, userId);
+                    grantRuntimePermissionsLPw(rockVideoPackage, STORAGE_PERMISSIONS, userId);
+                }
+	    }
             mService.mSettings.onDefaultRuntimePermissionsGrantedLPr(userId);
         }
     }
