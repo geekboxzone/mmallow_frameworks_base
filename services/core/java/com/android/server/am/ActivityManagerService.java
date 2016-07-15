@@ -1454,6 +1454,7 @@ public final class ActivityManagerService extends ActivityManagerNative
                         	return;
                     	}
 		    }
+                    mShowDialogs = "vr".equals(android.os.SystemProperties.get("ro.target.product","unknown")) ? false:mShowDialogs;
                     if (mShowDialogs && !mSleeping && !mShuttingDown) {
                         Dialog d = new AppErrorDialog(mContext,
                                 ActivityManagerService.this, res, proc);

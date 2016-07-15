@@ -116,7 +116,8 @@ public class ImmersiveModeConfirmation {
             boolean userSetupComplete) {
         mHandler.removeMessages(H.SHOW);
         if (isImmersiveMode) {
-            final boolean disabled = PolicyControl.disableImmersiveConfirmation(pkg);
+            boolean isVr = "vr".equals(android.os.SystemProperties.get("ro.target.product","unknown"));
+            final boolean disabled = isVr?true:PolicyControl.disableImmersiveConfirmation(pkg);
             if (DEBUG) Slog.d(TAG, String.format("immersiveModeChanged() disabled=%s mConfirmed=%s",
                     disabled, mConfirmed));
             if (!disabled && (DEBUG_SHOW_EVERY_TIME || !mConfirmed) && userSetupComplete) {
