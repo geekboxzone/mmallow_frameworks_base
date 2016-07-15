@@ -382,11 +382,11 @@ public class UsbDeviceManager {
                 connected = 1;
                 configured = 0;
                 setEnabledFunctions(getStatusFunctions(),false);
-                if (!mCharging){
-                    mUsbDataUnlocked = true;
-                    updateUsbNotification();
-                    updateUsbStateBroadcast();
-                }
+                //if (!mCharging){
+                //    mUsbDataUnlocked = true;
+                //    updateUsbNotification();
+                //    updateUsbStateBroadcast();
+                //}
                 mCharging=false;
             } else if ("CONFIGURED".equals(state)) {
                 connected = 1;
@@ -673,7 +673,6 @@ public class UsbDeviceManager {
                         // When a disconnect occurs, relock access to sensitive user data
                         mUsbDataUnlocked = false;
                     }
-                    updateUsbNotification();
                     updateAdbNotification();
 
                     if (DEBUG) Slog.d(TAG, "mConfigured ="+mConfigured +", mUsbDataUnlocked="+mUsbDataUnlocked +",mCurrentFunction= "+mCurrentFunctions);
@@ -689,6 +688,7 @@ public class UsbDeviceManager {
                     }
 
                     if (mBootCompleted) {
+                        updateUsbNotification();
                         updateUsbStateBroadcast();
                         updateUsbFunctions();
                     }
@@ -719,9 +719,7 @@ public class UsbDeviceManager {
                 case MSG_BOOT_COMPLETED:
                     mBootCompleted = true;
                     setEnabledFunctions(getDefaultFunctions(),true);
-                    mUsbDataUnlocked = true;
-                    updateUsbNotification();
-                    updateUsbStateBroadcast();
+                    setUsbDataUnlocked(true);
                     if (mCurrentAccessory != null) {
                         getCurrentSettings().accessoryAttached(mCurrentAccessory);
                     }
