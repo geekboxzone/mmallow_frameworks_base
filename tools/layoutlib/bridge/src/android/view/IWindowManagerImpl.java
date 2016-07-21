@@ -535,4 +535,11 @@ public class IWindowManagerImpl implements IWindowManager {
    public void setJoyStick(int index, int[] postion, int[] size){
    }
    //$_rbox_$_modify_$_end
+    @Override
+    public void cancelTaskWindowTransition(int taskId) {
+    }
+
+    @Override
+    public void cancelTaskThumbnailTransition(int taskId) {
+    }
 }
