@@ -6690,8 +6690,8 @@ public class WindowManagerService extends IWindowManager.Stub
              rotation = Surface.ROTATION_90;
         }
 
-         if("vr".equals(SystemProperties.get("ro.target.product","tablet")))
-           rotation = Surface.ROTATION_0;
+        // if("vr".equals(SystemProperties.get("ro.target.product","tablet")))
+          // rotation = Surface.ROTATION_0;
         if (mRotation == rotation && mAltOrientation == altOrientation) {
             // No change.
             return false;
