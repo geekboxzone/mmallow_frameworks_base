@@ -469,6 +469,16 @@ final class DefaultPermissionGrantPolicy {
                 grantRuntimePermissionsLPw(galleryPackage, STORAGE_PERMISSIONS, userId);
             }
 
+            //RkVideoPlayer
+            Intent rkvideoIntent = new Intent(Intent.ACTION_MAIN);
+            rkvideoIntent.addCategory(Intent.CATEGORY_APP_RKVIDEO);
+            PackageParser.Package rkvideoPackage = getDefaultSystemHandlerActivityPackageLPr(
+                    rkvideoIntent, userId);
+            if (rkvideoPackage != null
+                    && doesPackageSupportRuntimePermissions(rkvideoPackage)) {
+                grantRuntimePermissionsLPw(rkvideoPackage, STORAGE_PERMISSIONS, userId);
+            }
+
             // Email
             Intent emailIntent = new Intent(Intent.ACTION_MAIN);
             emailIntent.addCategory(Intent.CATEGORY_APP_EMAIL);

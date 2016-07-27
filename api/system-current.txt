@@ -8466,6 +8466,7 @@ package android.content {
     field public static final java.lang.String CATEGORY_APP_MARKET = "android.intent.category.APP_MARKET";
     field public static final java.lang.String CATEGORY_APP_MESSAGING = "android.intent.category.APP_MESSAGING";
     field public static final java.lang.String CATEGORY_APP_MUSIC = "android.intent.category.APP_MUSIC";
+    field public static final java.lang.String CATEGORY_APP_RKVIDEO = "android.intent.category.APP_RKVIDEO";
     field public static final java.lang.String CATEGORY_BROWSABLE = "android.intent.category.BROWSABLE";
     field public static final java.lang.String CATEGORY_CAR_DOCK = "android.intent.category.CAR_DOCK";
     field public static final java.lang.String CATEGORY_CAR_MODE = "android.intent.category.CAR_MODE";

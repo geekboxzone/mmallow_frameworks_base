@@ -3261,7 +3261,7 @@ public class Intent implements Parcelable, Cloneable {
      */
     @SdkConstant(SdkConstantType.INTENT_CATEGORY)
     public static final String CATEGORY_APP_GALLERY = "android.intent.category.APP_GALLERY";
-
+    public static final String CATEGORY_APP_RKVIDEO = "android.intent.category.APP_RKVIDEO";
     /**
      * Used with {@link #ACTION_MAIN} to launch the maps application.
      * The activity should be able to show the user's current location and surroundings.
