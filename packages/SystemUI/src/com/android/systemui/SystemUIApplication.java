@@ -51,14 +51,26 @@ public class SystemUIApplication extends Application {
             com.android.systemui.keyboard.KeyboardUI.class,
     };
 
+    private final Class<?>[] VRSERVICES = new Class[] {
+            com.android.systemui.tuner.TunerService.class,
+            //com.android.systemui.keyguard.KeyguardViewMediator.class,
+            //com.android.systemui.recents.Recents.class,
+            com.android.systemui.volume.VolumeUI.class,
+            //com.android.systemui.statusbar.SystemBars.class,
+            //com.android.systemui.usb.StorageNotification.class,
+            com.android.systemui.power.PowerUI.class,
+            com.android.systemui.media.RingtonePlayer.class,
+            com.android.systemui.keyboard.KeyboardUI.class,
+    };
     /**
      * Hold a reference on the stuff we start.
      */
-    private final SystemUI[] mServices = new SystemUI[SERVICES.length];
+    private SystemUI[] mServices;
     private boolean mServicesStarted;
     private boolean mBootCompleted;
     private final Map<Class<?>, Object> mComponents = new HashMap<Class<?>, Object>();
-
+    private boolean isVr;
+    
     @Override
     public void onCreate() {
         super.onCreate();
@@ -66,7 +78,7 @@ public class SystemUIApplication extends Application {
         // application theme in the manifest does only work for activities. Keep this in sync with
         // the theme set there.
         setTheme(R.style.systemui_theme);
-
+       isVr = "vr".equals(SystemProperties.get("ro.target.product", "unknown"));
         IntentFilter filter = new IntentFilter(Intent.ACTION_BOOT_COMPLETED);
         filter.setPriority(IntentFilter.SYSTEM_HIGH_PRIORITY);
         registerReceiver(new BroadcastReceiver() {
@@ -107,11 +119,11 @@ public class SystemUIApplication extends Application {
                 if (DEBUG) Log.v(TAG, "BOOT_COMPLETED was already sent");
             }
         }
-
         Log.v(TAG, "Starting SystemUI services.");
-        final int N = SERVICES.length;
+        final int N = isVr ? VRSERVICES.length : SERVICES.length;
+        mServices = new SystemUI[N];
         for (int i=0; i<N; i++) {
-            Class<?> cl = SERVICES[i];
+            Class<?> cl = isVr ? VRSERVICES[i] : SERVICES[i];
             if (DEBUG) Log.d(TAG, "loading: " + cl);
             try {
                 mServices[i] = (SystemUI)cl.newInstance();
