@@ -37,7 +37,7 @@ public class BarTransitions {
     private static final boolean DEBUG = false;
     private static final boolean DEBUG_COLORS = false;
 
-    public static final boolean HIGH_END = ActivityManager.isHighEndGfx();
+    public static final boolean HIGH_END = true;//ActivityManager.isHighEndGfx();
 
     public static final int MODE_OPAQUE = 0;
     public static final int MODE_SEMI_TRANSPARENT = 1;

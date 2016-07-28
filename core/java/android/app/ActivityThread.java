@@ -4445,14 +4445,14 @@ public final class ActivityThread {
         android.ddm.DdmHandleAppName.setAppName(data.processName,
                                                 UserHandle.myUserId());
 
-        if (data.persistent) {
-            // Persistent processes on low-memory devices do not get to
-            // use hardware accelerated drawing, since this can add too much
-            // overhead to the process.
-            if (!ActivityManager.isHighEndGfx()) {
-                HardwareRenderer.disable(false);
-            }
-        }
+        //if (data.persistent) {
+        //    // Persistent processes on low-memory devices do not get to
+        //    // use hardware accelerated drawing, since this can add too much
+        //   // overhead to the process.
+        //    if (!ActivityManager.isHighEndGfx()) {
+        //        HardwareRenderer.disable(false);
+        //    }
+        //}
 
         if (mProfiler.profileFd != null) {
             mProfiler.startProfiling();
@@ -5319,11 +5319,11 @@ public final class ActivityThread {
         // The system process on low-memory devices do not get to use hardware
         // accelerated drawing, since this can add too much overhead to the
         // process.
-        if (!ActivityManager.isHighEndGfx()) {
-            HardwareRenderer.disable(true);
-        } else {
+        //if (!ActivityManager.isHighEndGfx()) {
+        //    HardwareRenderer.disable(true);
+        //} else {
             HardwareRenderer.enableForegroundTrimming();
-        }
+        //}
         ActivityThread thread = new ActivityThread();
         thread.attach(true);
         return thread;

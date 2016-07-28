@@ -822,11 +822,11 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
                 R.id.notification_panel);
         mNotificationPanel.setStatusBar(this);
 
-        if (!ActivityManager.isHighEndGfx()) {
-            mStatusBarWindow.setBackground(null);
-            mNotificationPanel.setBackground(new FastColorDrawable(context.getColor(
-                    R.color.notification_panel_solid_background)));
-        }
+        //if (!ActivityManager.isHighEndGfx()) {
+        //   mStatusBarWindow.setBackground(null);
+        //    mNotificationPanel.setBackground(new FastColorDrawable(context.getColor(
+        //            R.color.notification_panel_solid_background)));
+        //}
 
         mHeadsUpManager = new HeadsUpManager(context, mStatusBarWindow);
         mHeadsUpManager.setBar(this);
@@ -1328,9 +1328,9 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
                     | WindowManager.LayoutParams.FLAG_SPLIT_TOUCH,
                 PixelFormat.TRANSLUCENT);
         // this will allow the navbar to run in an overlay on devices that support this
-        if (ActivityManager.isHighEndGfx()) {
-            lp.flags |= WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED;
-        }
+        //if (ActivityManager.isHighEndGfx()) {
+        //    lp.flags |= WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED;
+        //}
 
         lp.setTitle("NavigationBar");
         lp.windowAnimations = 0;
