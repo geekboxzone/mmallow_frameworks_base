@@ -1041,7 +1041,7 @@ final class ActivityStack {
             // In that case go ahead and remove the freeze this activity has on the screen
             // since it is no longer visible.
             prev.stopFreezingScreenLocked(true /*force*/);
-	    if("true".equals(SystemProperties.get("ro.config.low_ram", "false")) && (!"true".equals(SystemProperties.get("sys.cts_gts.status", "false"))))
+	    if(("true".equals(SystemProperties.get("ro.config.low_ram", "false")) || "vr".equals(SystemProperties.get("ro.target.product","unknown" ))) && (!"true".equals(SystemProperties.get("sys.cts_gts.status", "false"))))
    	    {
 		ActivityStack topStack = mStackSupervisor.getFocusedStack();
 		ActivityRecord next = topStack.topRunningActivityLocked(null);
