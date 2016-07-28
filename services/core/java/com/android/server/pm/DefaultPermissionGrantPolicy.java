@@ -589,12 +589,27 @@ final class DefaultPermissionGrantPolicy {
 
              //rk RockVideoPlayer
             if("vr".equals(android.os.SystemProperties.get("ro.target.product","tablet"))){
-                PackageParser.Package rockVideoPackage = getSystemPackageLPr("com.rockchip.vr");
+                PackageParser.Package rockVideoPackage = getSystemPackageLPr("com.rockchip.vr.videoplayer");
                 if (rockVideoPackage != null
                         && doesPackageSupportRuntimePermissions(rockVideoPackage)) {
                     grantRuntimePermissionsLPw(rockVideoPackage, PHONE_PERMISSIONS, userId);
                     grantRuntimePermissionsLPw(rockVideoPackage, STORAGE_PERMISSIONS, userId);
                 }
+                //vr settings
+                PackageParser.Package settingsPackage = getSystemPackageLPr("com.rockchip.vr.setting");
+                if (settingsPackage != null
+                        && doesPackageSupportRuntimePermissions(settingsPackage)) {
+                    grantRuntimePermissionsLPw(settingsPackage, LOCATION_PERMISSIONS, userId);
+                    grantRuntimePermissionsLPw(settingsPackage, LOCATION_PERMISSIONS, userId);
+                }
+
+                //vr explorer
+                PackageParser.Package explorerPackage = getSystemPackageLPr("com.rockchip.vr.explorer");
+                if (explorerPackage != null
+                        && doesPackageSupportRuntimePermissions(explorerPackage)) {
+                    grantRuntimePermissionsLPw(explorerPackage, STORAGE_PERMISSIONS, userId);
+                }
+
 	    }
             mService.mSettings.onDefaultRuntimePermissionsGrantedLPr(userId);
         }
