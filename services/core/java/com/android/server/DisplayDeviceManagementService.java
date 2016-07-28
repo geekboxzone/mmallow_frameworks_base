@@ -67,7 +67,7 @@ class DisplayDeviceManagementService extends IDisplayDeviceManagementService.Stu
             return;
         }
 
-        if ("unknown".equals(SystemProperties.get("ro.target.product", "unknown"))) {
+        if ("unknown".equals(SystemProperties.get("ro.target.product", "unknown")) || "vr".equals(SystemProperties.get("ro.target.product", "unknown"))) {
             return;
         }
 
