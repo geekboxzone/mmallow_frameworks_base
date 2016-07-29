@@ -2269,7 +2269,7 @@
 
     <!-- This config is used to force VoiceInteractionService to start on certain low ram devices.
          It declares the package name of VoiceInteractionService that should be started. -->
-    <string translatable="false" name="config_forceVoiceInteractionServicePackage"></string>
+    <string translatable="false" name="config_forceVoiceInteractionServicePackage">com.google.android.googlequicksearchbox</string>
 
     <!-- This config is ued to determine whether animations are allowed in low power mode. -->
     <bool name="config_allowAnimationsInLowPowerMode">false</bool>
