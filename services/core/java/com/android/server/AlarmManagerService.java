@@ -32,6 +32,7 @@ import android.content.pm.PackageManager;
 import android.database.ContentObserver;
 import android.net.Uri;
 import android.os.Binder;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -71,12 +72,29 @@ import java.util.Random;
 import java.util.TimeZone;
 import java.util.TreeSet;
 
+import android.os.Environment;
+import android.os.FileUtils;
+import android.util.Xml;
+import com.android.internal.util.FastXmlSerializer;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.BufferedOutputStream;
+import java.util.List;
+import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserException;
+import org.xmlpull.v1.XmlSerializer;
+
 import static android.app.AlarmManager.RTC_WAKEUP;
 import static android.app.AlarmManager.RTC;
 import static android.app.AlarmManager.ELAPSED_REALTIME_WAKEUP;
 import static android.app.AlarmManager.ELAPSED_REALTIME;
+import static android.app.AlarmManager.ScreenOffAlarmStrategy.SCREEN_OFF_ALARM_STRATEGY_NONE;
 
 import com.android.internal.util.LocalLog;
+import com.android.server.AlarmAlignmentManager.AlarmExtraData;
+import com.android.server.AlarmAlignmentManager.AlarmAlignmentInfo;
 
 class AlarmManagerService extends SystemService {
     private static final int RTC_WAKEUP_MASK = 1 << RTC_WAKEUP;
@@ -90,9 +108,11 @@ class AlarmManagerService extends SystemService {
     static final int TYPE_NONWAKEUP_MASK = 0x1; // low bit => non-wakeup
 
     static final String TAG = "AlarmManager";
-    static final boolean localLOGV = false;
+    static final boolean localLOGV = (Build.IS_DEBUGGABLE
+                && SystemProperties.getInt("persist.sys.alarm_dbg", 0) == 1);
     static final boolean DEBUG_BATCH = localLOGV || false;
-    static final boolean DEBUG_VALIDATE = localLOGV || false;
+    // enable this manually if needed, enabling this will add extra logic
+    static final boolean DEBUG_VALIDATE = false;
     static final boolean DEBUG_ALARM_CLOCK = localLOGV || false;
     static final boolean RECORD_ALARMS_IN_HISTORY = true;
     static final int ALARM_EVENT = 1;
@@ -160,6 +180,8 @@ class AlarmManagerService extends SystemService {
     // May only use on mHandler's thread, locking not required.
     private final SparseArray<AlarmManager.AlarmClockInfo> mHandlerSparseAlarmClockArray =
             new SparseArray<>();
+
+    private AlarmAlignmentManager mAlarmAlignmentManager;
 
     /**
      * All times are in milliseconds. These constants are kept synchronized with the system
@@ -599,6 +621,8 @@ class AlarmManagerService extends SystemService {
     public AlarmManagerService(Context context) {
         super(context);
         mConstants = new Constants(mHandler);
+
+        mAlarmAlignmentManager = AlarmAlignmentManager.getInstance(this);
     }
 
     static long convertToElapsed(long when, int type) {
@@ -793,6 +817,9 @@ class AlarmManagerService extends SystemService {
 
     @Override
     public void onStart() {
+        // we need to load config asap
+        mAlarmAlignmentManager.loadAlarmWindowConfigs(true, true);
+
         mNativeData = init();
         mNextWakeup = mNextNonWakeup = 0;
 
@@ -898,6 +925,18 @@ class AlarmManagerService extends SystemService {
             return;
         }
 
+
+
+        if (localLOGV) {
+            Slog.d(TAG, "setImpl() - type=" + type
+                    + " triggerAtTime=" + triggerAtTime + " win=" + windowLength
+                    + " interval=" + interval + " flags=0x" + Integer.toHexString(flags)
+                    + " workSource=" + workSource + " alarmClock=" + alarmClock
+                    + " callingUid=" + callingUid);
+            Slog.d(TAG, "operation=" + operation);
+            Slog.d(TAG, "intent=" + operation.getIntent());
+        }
+
         // Sanity check the window length.  This will catch people mistakenly
         // trying to pass an end-of-window timestamp rather than a duration.
         if (windowLength > AlarmManager.INTERVAL_HALF_DAY) {
@@ -931,7 +970,29 @@ class AlarmManagerService extends SystemService {
         final long nominalTrigger = convertToElapsed(triggerAtTime, type);
         // Try to prevent spamming by making sure we aren't firing alarms in the immediate future
         final long minTrigger = nowElapsed + mConstants.MIN_FUTURITY;
-        final long triggerElapsed = (nominalTrigger > minTrigger) ? nominalTrigger : minTrigger;
+        // We may need to modify the trigger time
+        /*final*/ long triggerElapsed = (nominalTrigger > minTrigger) ? nominalTrigger : minTrigger;
+
+        AlarmExtraData extra = null;
+        if (mAlarmAlignmentManager.getStrategy() != SCREEN_OFF_ALARM_STRATEGY_NONE
+                && !mInteractive && !mAlarmAlignmentManager.isCharging()
+                && operation != null
+                && mAlarmAlignmentManager.isFilteredAppAlarm(
+                    operation.getCreatorPackage(), operation.getIntent(),
+                    alarmClock, flags)) {
+            // TODO object pool?
+            AlarmAlignmentInfo info = new AlarmAlignmentInfo(triggerAtTime, triggerElapsed,
+                    interval, windowLength, flags);
+
+            extra = mAlarmAlignmentManager.alignAppAlarm(type, nowElapsed,
+                    nominalTrigger, minTrigger, info);
+
+            triggerAtTime = info.triggerAtTime;
+            triggerElapsed = info.triggerElapsed;
+            windowLength = info.windowLength;
+            interval = info.interval;
+            flags = info.flags;
+        }
 
         final long maxElapsed;
         if (windowLength == AlarmManager.WINDOW_EXACT) {
@@ -951,8 +1012,16 @@ class AlarmManagerService extends SystemService {
                         + " tElapsed=" + triggerElapsed + " maxElapsed=" + maxElapsed
                         + " interval=" + interval + " flags=0x" + Integer.toHexString(flags));
             }
-            setImplLocked(type, triggerAtTime, triggerElapsed, windowLength, maxElapsed,
-                    interval, operation, flags, true, workSource, alarmClock, callingUid);
+            if (extra == null) {
+                setImplLocked(type, triggerAtTime, triggerElapsed, windowLength, maxElapsed,
+                        interval, operation, flags, true, workSource, alarmClock, callingUid);
+            } else {
+                if (localLOGV) {
+                    Slog.d(TAG, "extra=" + extra);
+                }
+                setImplLocked(type, triggerAtTime, triggerElapsed, windowLength, maxElapsed,
+                        interval, operation, flags, true, workSource, alarmClock, callingUid, extra);
+            }
         }
     }
 
@@ -960,8 +1029,20 @@ class AlarmManagerService extends SystemService {
             long maxWhen, long interval, PendingIntent operation, int flags,
             boolean doValidate, WorkSource workSource, AlarmManager.AlarmClockInfo alarmClock,
             int uid) {
+        setImplLocked(type, when, whenElapsed, windowLength,
+                maxWhen, interval, operation, flags,
+                doValidate, workSource, alarmClock,
+                uid, null);
+    }
+
+    private void setImplLocked(int type, long when, long whenElapsed, long windowLength,
+            long maxWhen, long interval, PendingIntent operation, int flags,
+            boolean doValidate, WorkSource workSource, AlarmManager.AlarmClockInfo alarmClock,
+            int uid, AlarmExtraData extra) {
         Alarm a = new Alarm(type, when, whenElapsed, windowLength, maxWhen, interval,
                 operation, workSource, flags, alarmClock, uid);
+        a.extra = extra;
+
         removeLocked(operation);
         setImplLocked(a, false, doValidate);
     }
@@ -1160,6 +1241,24 @@ class AlarmManagerService extends SystemService {
                     "getNextAlarmClock", null);
 
             return getNextAlarmClockImpl(userId);
+        }
+
+        @Override
+        public AlarmManager.AppAlarmConfig getAppAlarmConfig(boolean parseXml, boolean update) {
+            int callingUid = Binder.getCallingUid();
+            if (Process.ROOT_UID == callingUid || Process.SYSTEM_UID == callingUid) {
+                return mAlarmAlignmentManager.loadAlarmWindowConfigs(parseXml, update);
+            }
+            return null;
+        }
+
+        @Override
+        public boolean setAppAlarmConfig(AlarmManager.AppAlarmConfig alarmConfig, boolean update, boolean persist) {
+            int callingUid = Binder.getCallingUid();
+            if (Process.ROOT_UID == callingUid || Process.SYSTEM_UID == callingUid) {
+                return mAlarmAlignmentManager.persistAppAlarmConfig(alarmConfig, update, persist);
+            }
+            return false;
         }
 
         @Override
@@ -1419,6 +1518,8 @@ class AlarmManagerService extends SystemService {
                 }
                 pw.println();
             }
+
+            mAlarmAlignmentManager.dumpLocked(pw, nowELAPSED, nowRTC, sdf);
         }
     }
 
@@ -1475,7 +1576,7 @@ class AlarmManagerService extends SystemService {
         }
     }
 
-    AlarmManager.AlarmClockInfo getNextAlarmClockImpl(int userId) {
+    private AlarmManager.AlarmClockInfo getNextAlarmClockImpl(int userId) {
         synchronized (mLock) {
             return mNextAlarmClockForUser.get(userId);
         }
@@ -1646,6 +1747,8 @@ class AlarmManagerService extends SystemService {
             }
         }
 
+        mAlarmAlignmentManager.removeSkippedNonWakeupAlarmLocked(operation);
+
         if (didRemove) {
             if (DEBUG_BATCH) {
                 Slog.v(TAG, "remove(operation) changed bounds; rebatching");
@@ -1682,6 +1785,8 @@ class AlarmManagerService extends SystemService {
             }
         }
 
+        mAlarmAlignmentManager.removeSkippedNonWakeupAlarmLocked(packageName);
+
         if (didRemove) {
             if (DEBUG_BATCH) {
                 Slog.v(TAG, "remove(package) changed bounds; rebatching");
@@ -1708,6 +1813,9 @@ class AlarmManagerService extends SystemService {
                 mPendingWhileIdleAlarms.remove(i);
             }
         }
+
+        mAlarmAlignmentManager.removeSkippedNonWakeupAlarmLocked(userHandle);
+
         for (int i = mLastAllowWhileIdleDispatch.size() - 1; i >= 0; i--) {
             if (UserHandle.getUserId(mLastAllowWhileIdleDispatch.keyAt(i)) == userHandle) {
                 mLastAllowWhileIdleDispatch.removeAt(i);
@@ -1744,8 +1852,19 @@ class AlarmManagerService extends SystemService {
                         mNonInteractiveTime = dur;
                     }
                 }
+
+                if (mAlarmAlignmentManager.getStrategy()
+                        != SCREEN_OFF_ALARM_STRATEGY_NONE) {
+                    mAlarmAlignmentManager.recoverChangedAlarmsLocked();
+                }
             } else {
                 mNonInteractiveStartTime = nowELAPSED;
+
+                if (mAlarmAlignmentManager.getStrategy()
+                           != SCREEN_OFF_ALARM_STRATEGY_NONE
+                        && !mAlarmAlignmentManager.isCharging()) {
+                    mAlarmAlignmentManager.coolDownRepeatAlarmsLocked();
+                }
             }
         }
     }
@@ -1761,6 +1880,9 @@ class AlarmManagerService extends SystemService {
             if (mPendingWhileIdleAlarms.get(i).operation.getTargetPackage().equals(packageName)) {
                 return true;
             }
+        }
+        if (mAlarmAlignmentManager.lookForSkippedNonWakeupAlarmLocked(packageName)) {
+            return true;
         }
         return false;
     }
@@ -1810,7 +1932,8 @@ class AlarmManagerService extends SystemService {
         return "--unknown--";
     }
 
-    private static final void dumpAlarmList(PrintWriter pw, ArrayList<Alarm> list,
+    /*private // used by AlarmAlignmentManager*/
+    static final void dumpAlarmList(PrintWriter pw, ArrayList<Alarm> list,
             String prefix, long nowELAPSED, long nowRTC, SimpleDateFormat sdf) {
         for (int i=list.size()-1; i>=0; i--) {
             Alarm a = list.get(i);
@@ -1831,6 +1954,13 @@ class AlarmManagerService extends SystemService {
     boolean triggerAlarmsLocked(ArrayList<Alarm> triggerList, final long nowELAPSED,
             final long nowRTC) {
         boolean hasWakeup = false;
+        boolean isCharging = false;
+
+        if (!mInteractive
+                && mAlarmAlignmentManager.getStrategy() != SCREEN_OFF_ALARM_STRATEGY_NONE) {
+            isCharging = mAlarmAlignmentManager.isCharging();
+        }
+
         // batches are temporally sorted, so we need only pull from the
         // start of the list until we either empty it or hit a batch
         // that is not yet deliverable
@@ -1854,13 +1984,34 @@ class AlarmManagerService extends SystemService {
                     // schedule such alarms.
                     long lastTime = mLastAllowWhileIdleDispatch.get(alarm.uid, 0);
                     long minTime = lastTime + mAllowWhileIdleMinTime;
+                    long roundedElapsed = minTime;
+                    long deltaElapsed = 0L;
                     if (nowELAPSED < minTime) {
                         // Whoops, it hasn't been long enough since the last ALLOW_WHILE_IDLE
                         // alarm went off for this app.  Reschedule the alarm to be in the
                         // correct time period.
-                        alarm.whenElapsed = minTime;
-                        if (alarm.maxWhenElapsed < minTime) {
-                            alarm.maxWhenElapsed = minTime;
+
+                        if (mAlarmAlignmentManager.getStrategy()
+                            != SCREEN_OFF_ALARM_STRATEGY_NONE
+                            && !mInteractive && !isCharging
+                            && (alarm.wakeup || mAlarmAlignmentManager.isAlignNonWakeup())
+                            && mAlarmAlignmentManager.isFilteredAppAlarmLocked(alarm)) {
+                            // Let's align this alarm if needed
+                            roundedElapsed = mAlarmAlignmentManager.roundToNextWakeup(
+                                    minTime, nowELAPSED, 0);
+                            deltaElapsed = roundedElapsed - minTime;
+                            if (deltaElapsed != 0) {
+                                alarm.ensureExtra();
+                                alarm.extra.triggerDelta += deltaElapsed;
+
+                                Slog.d(TAG, "rounded allow while idle alarm, minTime=" + minTime
+                                        + ", roundedElapsed=" + roundedElapsed);
+                            }
+                        }
+
+                        alarm.whenElapsed = roundedElapsed;
+                        if (alarm.maxWhenElapsed < roundedElapsed) {
+                            alarm.maxWhenElapsed = roundedElapsed;
                         }
                         setImplLocked(alarm, true, false);
                         continue;
@@ -1868,7 +2019,27 @@ class AlarmManagerService extends SystemService {
                 }
 
                 alarm.count = 1;
+
+                if (mAlarmAlignmentManager.getStrategy()
+                        != SCREEN_OFF_ALARM_STRATEGY_NONE
+                        && mAlarmAlignmentManager.isSkipNonWakeup()
+                        && !mInteractive && !isCharging && !alarm.wakeup
+                        && mAlarmAlignmentManager.isFilteredAppAlarmLocked(alarm)) {
+                    Slog.w(TAG, "skip trigger app non-wakeup alarm when screen off:" + alarm);
+                    if (alarm.repeatInterval > 0) { // let's save this information
+                        alarm.count += (nowELAPSED - alarm.whenElapsed) / alarm.repeatInterval;
+                    }
+                    mAlarmAlignmentManager.addSkippedNonWakeupAlarmLocked(alarm);
+                    continue;
+                }
+
                 triggerList.add(alarm);
+
+                if (mAlarmAlignmentManager.getStrategy() != SCREEN_OFF_ALARM_STRATEGY_NONE
+                        && !mInteractive && !isCharging) {
+                    mAlarmAlignmentManager.decreaseSurvivalLocked(alarm);
+                }
+
                 if ((alarm.flags&AlarmManager.FLAG_WAKE_FROM_IDLE) != 0) {
                     EventLogTags.writeDeviceIdleWakeFromIdle(mPendingIdleUntil != null ? 1 : 0,
                             alarm.tag);
@@ -1893,10 +2064,37 @@ class AlarmManagerService extends SystemService {
                     // Also schedule its next recurrence
                     final long delta = alarm.count * alarm.repeatInterval;
                     final long nextElapsed = alarm.whenElapsed + delta;
-                    setImplLocked(alarm.type, alarm.when + delta, nextElapsed, alarm.windowLength,
-                            maxTriggerTime(nowELAPSED, nextElapsed, alarm.repeatInterval),
-                            alarm.repeatInterval, alarm.operation, alarm.flags, true,
-                            alarm.workSource, alarm.alarmClock, alarm.uid);
+
+                    long triggerAtTime = alarm.when + delta;
+                    long triggerElapsed = nextElapsed;
+                    long windowLength = alarm.windowLength;
+                    long interval = alarm.repeatInterval;
+                    int flags = alarm.flags;
+
+                    if (mAlarmAlignmentManager.getStrategy()
+                            != SCREEN_OFF_ALARM_STRATEGY_NONE
+                            && !mInteractive && !isCharging
+                            && mAlarmAlignmentManager.isStrict()
+                            && (alarm.wakeup || mAlarmAlignmentManager.isAlignNonWakeup())
+                            && mAlarmAlignmentManager.isFilteredAppAlarmLocked(alarm)
+                        ) {
+                        AlarmAlignmentInfo info = new AlarmAlignmentInfo(triggerAtTime,
+                                triggerElapsed, interval, windowLength, flags);
+
+                        mAlarmAlignmentManager.alignRepeatAppAlarmLocked(
+                                alarm, nextElapsed, nowELAPSED, info);
+
+                        triggerAtTime = info.triggerAtTime;
+                        triggerElapsed = info.triggerElapsed;
+                        windowLength = info.windowLength;
+                        interval = info.interval;
+                        flags = info.flags;
+                    }
+
+                    setImplLocked(alarm.type, triggerAtTime, triggerElapsed, windowLength,
+                            maxTriggerTime(nowELAPSED, triggerElapsed, interval),
+                            interval, alarm.operation, flags, true,
+                            alarm.workSource, alarm.alarmClock, alarm.uid, alarm.extra);
                 }
 
                 if (alarm.wakeup) {
@@ -1941,8 +2139,9 @@ class AlarmManagerService extends SystemService {
             return 0;
         }
     }
-    
-    private static class Alarm {
+
+    // AlarmAlignmentManager need to use this.
+    /*private*/ static class Alarm {
         public final int type;
         public final long origWhen;
         public final boolean wakeup;
@@ -1959,6 +2158,7 @@ class AlarmManagerService extends SystemService {
         public long maxWhenElapsed; // also in the elapsed time base
         public long repeatInterval;
         public PriorityClass priorityClass;
+        public AlarmExtraData extra;
 
         public Alarm(int _type, long _when, long _whenElapsed, long _windowLength, long _maxWhen,
                 long _interval, PendingIntent _op, WorkSource _ws, int _flags,
@@ -1980,6 +2180,15 @@ class AlarmManagerService extends SystemService {
             uid = _uid;
         }
 
+        public void ensureExtra() {
+            if (extra == null) {
+                extra = new AlarmExtraData();
+                extra.orgRepeatInterval = repeatInterval;
+                extra.orgWindowLength = windowLength;
+                extra.triggerDelta = 0L;
+            }
+        }
+
         public static String makeTag(PendingIntent pi, int type) {
             return pi.getTag(type == ELAPSED_REALTIME_WAKEUP || type == RTC_WAKEUP
                     ? "*walarm*:" : "*alarm*:");
@@ -1997,6 +2206,11 @@ class AlarmManagerService extends SystemService {
             sb.append(" ");
             sb.append(operation.getTargetPackage());
             sb.append('}');
+
+            if (extra != null) {
+                sb.append(extra.toString());
+            }
+
             return sb.toString();
         }
 
@@ -2024,6 +2238,9 @@ class AlarmManagerService extends SystemService {
                 pw.print(prefix); pw.print("  showIntent="); pw.println(alarmClock.getShowIntent());
             }
             pw.print(prefix); pw.print("operation="); pw.println(operation);
+            if (extra != null) {
+                extra.dump(pw, prefix);
+            }
         }
     }
 
@@ -2110,6 +2327,11 @@ class AlarmManagerService extends SystemService {
                         ActivityManagerNative.noteAlarmStart(
                                 alarm.operation, -1, alarm.tag);
                     }
+                }
+                if (alarm.wakeup) {
+                    Slog.v(TAG, "triggered: "
+                            + alarm.operation.getIntent().toShortString(false, true, false, false)
+                            + " Pkg: " + alarm.operation.getTargetPackage() + "\n");
                 }
                 alarm.operation.send(getContext(), 0,
                         mBackgroundIntent.putExtra(

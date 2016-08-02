@@ -35,6 +35,9 @@ interface IAlarmManager {
     void remove(in PendingIntent operation);
     long getNextWakeFromIdleTime();
     AlarmManager.AlarmClockInfo getNextAlarmClock(int userId);
+    AlarmManager.AppAlarmConfig getAppAlarmConfig(boolean parseXml, boolean update);
+    boolean setAppAlarmConfig(in AlarmManager.AppAlarmConfig alarmConfig, boolean update, boolean persist);
+
 }
 
 
