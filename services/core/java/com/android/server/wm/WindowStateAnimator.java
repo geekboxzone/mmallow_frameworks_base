@@ -772,6 +772,10 @@ class WindowStateAnimator {
 
     SurfaceControl createSurfaceLocked() {
         final WindowState w = mWin;
+		ArrayList<String> PackNamelist = new ArrayList<String>();
+		PackNamelist.add("com.android.systemui");
+		PackNamelist.add("system");
+
         if (mSurfaceControl == null) {
             if (DEBUG_ANIM || DEBUG_ORIENTATION) Slog.i(TAG,
                     "createSurface " + this + ": mDrawState=DRAW_PENDING");
@@ -860,7 +864,16 @@ class WindowStateAnimator {
                         && attrs.surfaceInsets.bottom  == 0) {
                     flags |= SurfaceControl.OPAQUE;
                 }
-
+                               
+               	String title = attrs.getTitle().toString();
+              // Slog.d(TAG, "rk_debug" + title + "  sesion:" + mSession.mCallingPkgName.toString());
+			   	if(mSession.mCallingPkgName.equals("com.android.systemui")
+			   		|| mSession.mCallingPkgName.equals("system"))
+			   	{
+			   		title += "_Force_To_Dual";
+	               Slog.d(TAG, "rk_debug2 " + title );
+					
+			   	}
                 mSurfaceFormat = format;
                 if (DEBUG_SURFACE_TRACE) {
                     mSurfaceControl = new SurfaceTrace(
@@ -870,7 +883,7 @@ class WindowStateAnimator {
                 } else {
                     mSurfaceControl = new SurfaceControl(
                         mSession.mSurfaceSession,
-                        attrs.getTitle().toString(),
+                        title,
                         width, height, format, flags);
                 }
 

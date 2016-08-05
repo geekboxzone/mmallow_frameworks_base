@@ -48,6 +48,11 @@ import android.view.WindowManager;
 
 import java.io.PrintWriter;
 
+import java.io.FileInputStream;
+import java.io.InputStreamReader;
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 /**
  * This class represents an active client session.  There is generally one
  * Session object per process that is interacting with the window manager.
@@ -61,6 +66,7 @@ final class Session extends IWindowSession.Stub
     final int mUid;
     final int mPid;
     final String mStringName;
+	String mCallingPkgName; 
     SurfaceSession mSurfaceSession;
     int mNumWindow = 0;
     boolean mClientDead = false;
@@ -91,7 +97,39 @@ final class Session extends IWindowSession.Stub
         }
         sb.append("}");
         mStringName = sb.toString();
+               //Get name of process
+        StringBuffer cmdline = new StringBuffer();
+        cmdline.append("/proc/");
+        cmdline.append(String.valueOf(mPid));
+        cmdline.append("/cmdline");
 
+       try {
+            FileInputStream stream = new FileInputStream(cmdline.toString());
+            InputStreamReader inputReader = new InputStreamReader(stream, "UTF-8");
+            BufferedReader bufferReader = new BufferedReader(inputReader);
+            mCallingPkgName = bufferReader.readLine();
+            bufferReader.close();
+           inputReader.close();
+            stream.close();
+        } catch (FileNotFoundException ex){
+        } catch (IOException ex) {
+        }
+
+        StringBuilder builder = new StringBuilder();
+ 	     if (mCallingPkgName != null) {
+            for(int i=0 ; i < mCallingPkgName.length(); i++) {
+                char str = mCallingPkgName.charAt(i);
+                if(Character.isDigit(str) ||
+                       Character.isLetter(str) ||
+                       Character.compare(str, ".".charAt(0)) == 0) {
+                    builder.append(str);
+                } else {
+                    break;
+                }
+            }
+        }
+
+        mCallingPkgName = builder.toString();
         synchronized (mService.mWindowMap) {
             if (mService.mInputMethodManager == null && mService.mHaveInputMethods) {
                 IBinder b = ServiceManager.getService(
