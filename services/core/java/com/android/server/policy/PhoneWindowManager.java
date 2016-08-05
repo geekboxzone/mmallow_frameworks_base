@@ -99,6 +99,7 @@ import android.view.KeyCharacterMap;
 import android.view.KeyCharacterMap.FallbackAction;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
+import android.os.Parcel;
 
 import com.android.internal.logging.MetricsLogger;
 import com.android.internal.policy.PhoneWindow;
@@ -149,6 +150,7 @@ import android.app.DeviceManager;
  */
 public class PhoneWindowManager implements WindowManagerPolicy {
     static final String TAG = "WindowManager";
+    static final boolean STEREO = false;
     static final boolean DEBUG = false;
     static final boolean localLOGV = false;
     static final boolean DEBUG_INPUT = false;
@@ -4923,6 +4925,24 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         }
     }
 
+    private long lastTimeForKeyVolumeUp=0;
+    private int stereo = 0;
+
+    public void repaintEverything(){                                                                                                 
+        try {
+            IBinder flinger = ServiceManager.getService("SurfaceFlinger");
+            if (flinger != null) {
+                Parcel data = Parcel.obtain();
+                data.writeInterfaceToken("android.ui.ISurfaceComposer");
+                final int repaintSignal = 1;
+                data.writeInt(repaintSignal);
+                flinger.transact(1004, data, null, 0);
+                data.recycle();
+            }
+        } catch (RemoteException ex) {
+        }
+    }
+
     /** {@inheritDoc} */
     @Override
     public int interceptKeyBeforeQueueing(KeyEvent event, int policyFlags) {
@@ -4946,6 +4966,21 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                                             (interactive ?
                                                 isKeyguardShowingAndNotOccluded() :
                                                 mKeyguardDelegate.isShowing()));
+	if(STEREO){
+		if(event.getKeyCode()==KeyEvent.KEYCODE_VOLUME_DOWN){
+	      	 	if((System.currentTimeMillis()-lastTimeForKeyVolumeUp) < 400){
+        			stereo = (stereo + 1) % 2;
+	         		lastTimeForKeyVolumeUp=System.currentTimeMillis();
+         			if(1==stereo)
+        	                      	SystemProperties.set("sys.vr.stereo", "1");
+	         		if(0==stereo)
+         				SystemProperties.set("sys.vr.stereo", "0");
+                        	repaintEverything();
+                	}else{
+                        	lastTimeForKeyVolumeUp=System.currentTimeMillis();
+                	}
+        	}
+	}
 
         if (DEBUG_INPUT) {
             Log.d(TAG, "interceptKeyTq keycode=" + keyCode
