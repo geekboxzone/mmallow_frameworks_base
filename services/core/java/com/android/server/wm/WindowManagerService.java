@@ -6689,6 +6689,11 @@ public class WindowManagerService extends IWindowManager.Stub
              mRotation = Surface.ROTATION_0;
              rotation = Surface.ROTATION_90;
         }
+		/* display portrait, force android rotation according to 90 */
+        if("true".equals(SystemProperties.get("persist.display.portrait","false"))){
+             rotation = Surface.ROTATION_90;
+        }
+        /* display portrait end */
 
         // if("vr".equals(SystemProperties.get("ro.target.product","tablet")))
           // rotation = Surface.ROTATION_0;
