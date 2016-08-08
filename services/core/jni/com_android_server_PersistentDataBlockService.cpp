@@ -56,17 +56,17 @@ namespace android {
         if (range[1] == 0)
             return 0;
 
-        ret = ioctl(fd, BLKSECDISCARD, &range);
+        ret = ioctl(fd, BLKDISCARD, &range);
         if (ret < 0) {
-            ALOGE("Something went wrong secure discarding block: %s\n", strerror(errno));
+            ALOGE("Something went wrong non-secure discarding block: %s\n", strerror(errno));
             range[0] = 0;
             range[1] = len;
-            ret = ioctl(fd, BLKDISCARD, &range);
+            ret = ioctl(fd, BLKSECDISCARD, &range);
             if (ret < 0) {
                 ALOGE("Discard failed: %s\n", strerror(errno));
                 return -1;
             } else {
-                ALOGE("Wipe via secure discard failed, used non-secure discard instead\n");
+                ALOGE("Wipe via non-secure discard failed, used secure discard instead\n");
                 return 0;
             }
 

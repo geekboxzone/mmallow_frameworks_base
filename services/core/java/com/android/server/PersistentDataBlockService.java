@@ -244,6 +244,31 @@ public class PersistentDataBlockService extends SystemService {
         return md.digest();
     }
 
+    private void formatPartitionLocked_after_wipe() {
+        DataOutputStream outputStream;
+        try {
+            outputStream = new DataOutputStream(new FileOutputStream(new File(mDataBlockFile)));
+        } catch (FileNotFoundException e) {
+            Slog.e(TAG, "partition not available?", e);
+            return;
+        }
+
+        byte[] data = new byte[DIGEST_SIZE_BYTES];
+        try {
+            outputStream.write(data, 0, DIGEST_SIZE_BYTES);
+            outputStream.writeInt(PARTITION_TYPE_MARKER);
+            outputStream.writeInt(0); // data size
+            outputStream.flush();
+        } catch (IOException e) {
+            Slog.e(TAG, "failed to format block", e);
+            return;
+        } finally {
+            IoUtils.closeQuietly(outputStream);
+        }
+
+        computeAndWriteDigestLocked();
+    }
+
     private void formatPartitionLocked(boolean setOemUnlockEnabled) {
         DataOutputStream outputStream;
         try {
@@ -419,10 +444,16 @@ public class PersistentDataBlockService extends SystemService {
             enforceOemUnlockPermission();
 
             synchronized (mLock) {
+                int totalDataBlockSize = getDataBlockSize();
+                Slog.i("hxw", "totalDataBlockSize before wipe:"+totalDataBlockSize);
                 int ret = nativeWipe(mDataBlockFile);
-
                 if (ret < 0) {
                     Slog.e(TAG, "failed to wipe persistent partition");
+                    totalDataBlockSize = getDataBlockSize();
+                    Slog.i("hxw", "totalDataBlockSize after wipe:"+totalDataBlockSize);
+                    formatPartitionLocked_after_wipe();
+                    totalDataBlockSize = getDataBlockSize();
+                    Slog.i("hxw", "totalDataBlockSize after format:"+totalDataBlockSize);
                 }
             }
         }
