@@ -80,7 +80,7 @@ public class Tethering extends BaseNetworkObserver {
     private Context mContext;
     private final static String TAG = "Tethering";
     private final static boolean DBG = true;
-    private final static boolean VDBG = false;
+    private final static boolean VDBG = true;
 
     // TODO - remove both of these - should be part of interface inspection/selection stuff
     private String[] mTetherableUsbRegexs;
@@ -510,11 +510,17 @@ public class Tethering extends BaseNetworkObserver {
                 synchronized (Tethering.this.mPublicSync) {
                     boolean usbConnected = intent.getBooleanExtra(UsbManager.USB_CONNECTED, false);
                     mRndisEnabled = intent.getBooleanExtra(UsbManager.USB_FUNCTION_RNDIS, false);
+                    Log.d(TAG, "ACTION_USB_STATE received, usbConnected="+usbConnected+", mRndisEnabled="+mRndisEnabled);
                     // start tethering if we have a request pending
                     if (usbConnected && mRndisEnabled && mUsbTetherRequested) {
                         tetherUsb(true);
+                        mUsbTetherRequested = false;
+                    } else if (!usbConnected && mRndisEnabled && !mUsbTetherRequested) {
+                        Log.d(TAG, "usb disconnect, tetherUsb(false)");
+                        tetherUsb(false);
+                        UsbManager usbManager = (UsbManager)mContext.getSystemService(Context.USB_SERVICE);
+                        usbManager.setCurrentFunction(null);
                     }
-                    mUsbTetherRequested = false;
                 }
             } else if (action.equals(ConnectivityManager.CONNECTIVITY_ACTION)) {
                 NetworkInfo networkInfo = (NetworkInfo)intent.getParcelableExtra(
