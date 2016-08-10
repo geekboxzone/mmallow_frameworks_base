@@ -1120,7 +1120,12 @@ public class PhoneWindowManager implements WindowManagerPolicy {
             if (!performHapticFeedbackLw(null, HapticFeedbackConstants.LONG_PRESS, false)) {
                 performAuditoryFeedbackForAccessibilityIfNeed();
             }
-            showGlobalActionsInternal();
+            if("vr".equals(android.os.SystemProperties.get("ro.target.product","unknown"))){
+	       Intent intent = new Intent("com.rockchip.vr.action.power");
+               mContext.sendBroadcast(intent);
+            }else{
+               showGlobalActionsInternal();
+	    }
             break;
         case LONG_PRESS_POWER_SHUT_OFF:
         case LONG_PRESS_POWER_SHUT_OFF_NO_CONFIRM:
