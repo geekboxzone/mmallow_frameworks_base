@@ -2439,7 +2439,7 @@ public final class ActivityManagerService extends ActivityManagerNative
         Watchdog.getInstance().addMonitor(this);
         Watchdog.getInstance().addThread(mHandler);
 
-	if((("true".equals(SystemProperties.get("ro.config.low_ram", "false")))||("true".equals(SystemProperties.get("ro.mem_optimise.enable", "false")))) && (!"true".equals(SystemProperties.get("sys.cts_gts.status", "false")))){
+	if((("true".equals(SystemProperties.get("ro.config.low_ram", "false")))||("true".equals(SystemProperties.get("ro.mem_optimise.enable", "false"))) ||( "vr".equals(android.os.SystemProperties.get("ro.target.product","unknown"))) ) && (!"true".equals(SystemProperties.get("sys.cts_gts.status", "false")))){
   		File configureDir = Environment.getRootDirectory();
   		File packageForLowmemFilter = new File(configureDir, "etc/lowmem_package_filter.xml");
   		if (packageForLowmemFilter.exists()) {
