@@ -178,17 +178,42 @@ public class ZygoteInit {
     private static final int ROOT_UID = 0;
     private static final int ROOT_GID = 0;
 
+    private static Thread mResThread = new Thread(new Runnable(){
+        @Override
+        public void run() {
+            preloadResources();
+            preloadOpenGL();
+            preloadSharedLibraries();
+            preloadTextResources();
+            WebViewFactory.prepareWebViewInZygote();
+        }
+    });
+
     static void preload() {
         Log.d(TAG, "begin preload");
-        preloadClasses();
-        preloadResources();
-        preloadOpenGL();
-        preloadSharedLibraries();
-        preloadTextResources();
-        // Ask the WebViewFactory to do any initialization that must run in the zygote process,
-        // for memory sharing purposes.
-        WebViewFactory.prepareWebViewInZygote();
-        Log.d(TAG, "end preload");
+        try {
+         if(SystemProperties.get("ro.board.platform").equals("rk3399"))
+         {
+            Log.d(TAG,"----rk3399 preload----");
+            mResThread.start();
+            preloadClasses();
+            mResThread.join();
+         }
+         else
+         {
+            preloadClasses();
+            preloadResources();
+            preloadOpenGL();
+            preloadSharedLibraries();
+            preloadTextResources();
+            // Ask the WebViewFactory to do any initialization that must run in the zygote process,
+            // for memory sharing purposes.
+            WebViewFactory.prepareWebViewInZygote();
+         }
+         Log.d(TAG, "end preload");
+        }catch(Exception e){
+            Log.d(TAG,"----error when preload---");
+        }
     }
 
     private static void preloadSharedLibraries() {
@@ -540,7 +565,8 @@ public class ZygoteInit {
         /* For child process */
         if (pid == 0) {
             if (hasSecondZygote(abiList)) {
-                waitForSecondaryZygote(socketName);
+                Log.d(TAG,"--------call waitForSecondaryZygote,skip this---,abiList= "+abiList);
+                //waitForSecondaryZygote(socketName);
             }
 
             handleSystemServerProcess(parsedArgs);
