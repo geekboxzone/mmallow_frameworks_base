@@ -2364,7 +2364,6 @@ class DatabaseHelper extends SQLiteOpenHelper {
 
             // Set default cdma DTMF type
             loadSetting(stmt, Settings.System.DTMF_TONE_TYPE_WHEN_DIALING, 0);
-
             // Set default hearing aid
             loadSetting(stmt, Settings.System.HEARING_AID, 0);
 
@@ -2375,10 +2374,9 @@ class DatabaseHelper extends SQLiteOpenHelper {
                     R.bool.def_screenshot_button_show);
             loadSetting(stmt, Settings.System.SCREENSHOT_LOCATION,
                     Settings.System.SCREENSHOT_LOCATION_INTERNAL_SD);
-
-            loadIntegerSetting(stmt, Settings.System.SCREEN_BRIGHTNESS,
-                    R.integer.def_screen_brightness);
-
+	    loadSetting(stmt, Settings.System.SCREEN_BRIGHTNESS,
+		SystemProperties.getInt("ro.rk.def_brightness",mContext.getResources().getInteger(R.integer.def_screen_brightness)));
+		
             loadBooleanSetting(stmt, Settings.System.SCREEN_BRIGHTNESS_MODE,
                     R.bool.def_screen_brightness_automatic_mode);
 
