@@ -2079,12 +2079,26 @@ public class PackageManagerService extends IPackageManager.Stub {
                     | PackageParser.PARSE_IS_SYSTEM_DIR
                     | PackageParser.PARSE_IS_PRIVILEGED, scanFlags, 0);
 
-            // Collect ordinary system packages.
-            final File systemAppDir = new File(Environment.getRootDirectory(), "app");
-            scanDirLI(systemAppDir, PackageParser.PARSE_IS_SYSTEM
+            
+            final File systemAppDir = new File(Environment.getRootDirectory(), "app"); 
+            if(("true".equals(SystemProperties.get("ro.pms.multithreadscan")))
+                    &&("box".equals(SystemProperties.get("ro.target.product")))){
+                 Thread scanAppThread = new Thread(new Runnable(){
+                     @Override
+                     public void run() {
+                         // Collect ordinary system packages.
+                         scanDirLI(systemAppDir, PackageParser.PARSE_IS_SYSTEM
+                             | PackageParser.PARSE_IS_SYSTEM_DIR, scanFlags, 0);
+                     }    
+                 });
+
+                 scanAppThread.start();
+            }else {
+                // Collect ordinary system packages.
+                scanDirLI(systemAppDir, PackageParser.PARSE_IS_SYSTEM
                     | PackageParser.PARSE_IS_SYSTEM_DIR, scanFlags, 0);
-
-
+            }
+            
             File preinstallAppDir = new File(Environment.getRootDirectory(), "preinstall");
             File preinstallAppDelDir = new File(Environment.getRootDirectory(),
                     "preinstall_del");
