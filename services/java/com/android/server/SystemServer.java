@@ -440,6 +440,7 @@ public final class SystemServer {
         boolean disableNetwork = SystemProperties.getBoolean("config.disable_network", false);
         boolean disableNetworkTime = SystemProperties.getBoolean("config.disable_networktime", false);
         boolean isEmulator = SystemProperties.get("ro.kernel.qemu").equals("1");
+        boolean isBox = "box".equals(SystemProperties.get("ro.target.product"));
 
         try {
             Slog.i(TAG, "Reading configuration...");
@@ -450,9 +451,12 @@ public final class SystemServer {
 
             mSystemServiceManager.startService(TelecomLoaderService.class);
 
-            Slog.i(TAG, "Telephony Registry");
-            telephonyRegistry = new TelephonyRegistry(context);
-            ServiceManager.addService("telephony.registry", telephonyRegistry);
+            if(!isBox)
+            {
+                 Slog.i(TAG, "Telephony Registry");
+                 telephonyRegistry = new TelephonyRegistry(context);
+                 ServiceManager.addService("telephony.registry", telephonyRegistry);
+            }
 
             Slog.i(TAG, "Entropy Mixer");
             entropyMixer = new EntropyMixer(context);
@@ -835,7 +839,8 @@ public final class SystemServer {
                 reportWtf("starting Audio Service", e);
             }
 
-            if (!disableNonCoreServices) {
+            if (!disableNonCoreServices && !isBox) {
+                Slog.i(TAG, "DockObserver");
                 mSystemServiceManager.startService(DockObserver.class);
             }
 
@@ -960,7 +965,8 @@ public final class SystemServer {
             }
 
             if (mPackageManager.hasSystemFeature(PackageManager.FEATURE_PRINTING)) {
-                mSystemServiceManager.startService(PRINT_MANAGER_SERVICE_CLASS);
+                if(!isBox)
+                    mSystemServiceManager.startService(PRINT_MANAGER_SERVICE_CLASS);
             }
 
             mSystemServiceManager.startService(RestrictionsManagerService.class);
