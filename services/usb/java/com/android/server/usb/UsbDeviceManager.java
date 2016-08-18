@@ -671,7 +671,7 @@ public class UsbDeviceManager {
                     mConfigured = (msg.arg2 == 1);
                     if (!mConnected) {
                         // When a disconnect occurs, relock access to sensitive user data
-                        mUsbDataUnlocked = false;
+                        mUsbDataUnlocked = true;
                     }
                     updateAdbNotification();
 
@@ -684,7 +684,7 @@ public class UsbDeviceManager {
                         if (DEBUG) Slog.d(TAG, "restore defaults when USB is disconnected");
                         //setEnabledFunctions(null, false);
                     } else if (mConnected & mConfigured) {
-                        mUsbDataUnlocked = mOldUsbDataUnlocked;
+                        mUsbDataUnlocked = true;
                     }
 
                     if (mBootCompleted) {
