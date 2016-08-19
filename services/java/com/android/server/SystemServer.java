@@ -227,6 +227,7 @@ public final class SystemServer {
             }, SNAPSHOT_INTERVAL, SNAPSHOT_INTERVAL);
         }
 
+        Slog.i(TAG, "---before clearGrowthLimit---");       
         // Mmmmmm... more memory!
         VMRuntime.getRuntime().clearGrowthLimit();
 
@@ -251,20 +252,25 @@ public final class SystemServer {
         android.os.Process.setCanSelfBackground(false);
         Looper.prepareMainLooper();
 
+        Slog.i(TAG, "---before loadLibrary---");       
         // Initialize native services.
         System.loadLibrary("android_servers");
 
+        Slog.i(TAG, "---before performPendingShutdown---");       
         // Check whether we failed to shut down last time we tried.
         // This call may not return.
         performPendingShutdown();
 
+        Slog.i(TAG, "---before createSystemContext---");       
         // Initialize the system context.
         createSystemContext();
 
+        Slog.i(TAG, "---before new SystemServiceManager---");       
         // Create the system service manager.
         mSystemServiceManager = new SystemServiceManager(mSystemContext);
         LocalServices.addService(SystemServiceManager.class, mSystemServiceManager);
 
+        Slog.i(TAG, "---before startBootstrapServices---");       
         // Start services.
         try {
             startBootstrapServices();
@@ -322,17 +328,20 @@ public final class SystemServer {
      * the other functions.
      */
     private void startBootstrapServices() {
+        Slog.i(TAG, "------------enter startBootstrapServices-----------");       
         // Wait for installd to finish starting up so that it has a chance to
         // create critical directories such as /data/user with the appropriate
         // permissions.  We need this to complete before we initialize other services.
         Installer installer = mSystemServiceManager.startService(Installer.class);
 
+        Slog.i(TAG, "------------start installer-----------");   
         // Activity manager runs the show.
         mActivityManagerService = mSystemServiceManager.startService(
                 ActivityManagerService.Lifecycle.class).getService();
         mActivityManagerService.setSystemServiceManager(mSystemServiceManager);
         mActivityManagerService.setInstaller(installer);
 
+        Slog.i(TAG, "------------start ams-----------");   
         // Power manager needs to be started early because other services need it.
         // Native daemons may be watching for it to be registered so it must be ready
         // to handle incoming binder calls immediately (including being able to verify
@@ -343,16 +352,20 @@ public final class SystemServer {
         // initialize power management features.
         mActivityManagerService.initPowerManagement();
 
+        Slog.i(TAG, "------------start pms-----------");
         // Manages LEDs and display backlight so we need it to bring up the display.
         mSystemServiceManager.startService(LightsService.class);
 
+        Slog.i(TAG, "------------start lightservice----------");
         // Display manager is needed to provide display metrics before package manager
         // starts up.
         mDisplayManagerService = mSystemServiceManager.startService(DisplayManagerService.class);
 
+        Slog.i(TAG, "------------start displaymanager-----------");
         // We need the default display before we can initialize the package manager.
         mSystemServiceManager.startBootPhase(SystemService.PHASE_WAIT_FOR_DEFAULT_DISPLAY);
 
+        Slog.i(TAG, "----------- startBootPhase-----------");
         // Only run "core" apps if we're encrypting the device.
         String cryptState = SystemProperties.get("vold.decrypt");
         if (ENCRYPTING_STATE.equals(cryptState)) {
@@ -373,15 +386,19 @@ public final class SystemServer {
         Slog.i(TAG, "User Service");
         ServiceManager.addService(Context.USER_SERVICE, UserManagerService.getInstance());
 
+        Slog.i(TAG, "AttributeCache.init");        
         // Initialize attribute cache used to cache resources from packages.
         AttributeCache.init(mSystemContext);
 
+        Slog.i(TAG, "mActivityManagerService.setSystemProcess");    
         // Set up the Application instance for the system process and get started.
         mActivityManagerService.setSystemProcess();
+        Slog.i(TAG, "after mActivityManagerService.setSystemProcess"); 
 
         // The sensor service needs access to package manager service, app ops
         // service, and permissions service, therefore we start it after them.
         startSensorService();
+        Slog.i(TAG, "after startSensorService");   
     }
 
     /**
@@ -390,6 +407,7 @@ public final class SystemServer {
     private void startCoreServices() {
         // Tracks the battery level.  Requires LightService.
         mSystemServiceManager.startService(BatteryService.class);
+        Slog.i(TAG, "after BatteryService");     
 
         // Tracks application usage stats.
         mSystemServiceManager.startService(UsageStatsService.class);
@@ -397,9 +415,11 @@ public final class SystemServer {
                 LocalServices.getService(UsageStatsManagerInternal.class));
         // Update after UsageStatsService is available, needed before performBootDexOpt.
         mPackageManagerService.getUsageStatsIfNoPackageUsageInfo();
+        Slog.i(TAG, "after UsageStatsService");   
 
         // Tracks whether the updatable WebView is in a ready state and watches for update installs.
         mSystemServiceManager.startService(WebViewUpdateService.class);
+        Slog.i(TAG, "after WebViewUpdateService"); 
     }
 
     /**
@@ -1023,6 +1043,7 @@ public final class SystemServer {
 
         // Before things start rolling, be sure we have decided whether
         // we are in safe mode.
+        Slog.i(TAG, "begin detectSafeMode");
         final boolean safeMode = wm.detectSafeMode();
         if (safeMode) {
             mActivityManagerService.enterSafeMode();
@@ -1032,18 +1053,21 @@ public final class SystemServer {
             // Enable the JIT for the system_server process
             VMRuntime.getRuntime().startJitCompilation();
         }
+        Slog.i(TAG, "end detectSafeMode");
 
         // MMS service broker
         mmsService = mSystemServiceManager.startService(MmsServiceBroker.class);
 
         // It is now time to start up the app processes...
 
+        Slog.i(TAG, "vibrator.systemReady");   
         try {
             vibrator.systemReady();
         } catch (Throwable e) {
             reportWtf("making Vibrator Service ready", e);
         }
 
+        Slog.i(TAG, "lockSettings.systemReady");   
         if (lockSettings != null) {
             try {
                 lockSettings.systemReady();
@@ -1052,11 +1076,14 @@ public final class SystemServer {
             }
         }
 
+        Slog.i(TAG, "PHASE_LOCK_SETTINGS_READY");
         // Needed by DevicePolicyManager for initialization
         mSystemServiceManager.startBootPhase(SystemService.PHASE_LOCK_SETTINGS_READY);
 
+        Slog.i(TAG, "PHASE_SYSTEM_SERVICES_READY");
         mSystemServiceManager.startBootPhase(SystemService.PHASE_SYSTEM_SERVICES_READY);
 
+        Slog.i(TAG, "wm.systemReady");
         try {
             wm.systemReady();
         } catch (Throwable e) {
@@ -1076,6 +1103,7 @@ public final class SystemServer {
         w.getDefaultDisplay().getMetrics(metrics);
         context.getResources().updateConfiguration(config, metrics);
 
+        Slog.i(TAG, "mPowerManagerService.systemReady");   
         try {
             // TODO: use boot phase
             mPowerManagerService.systemReady(mActivityManagerService.getAppOpsService());
@@ -1083,12 +1111,14 @@ public final class SystemServer {
             reportWtf("making Power Manager Service ready", e);
         }
 
+        Slog.i(TAG, "mPackageManagerService.systemReady"); 
         try {
             mPackageManagerService.systemReady();
         } catch (Throwable e) {
             reportWtf("making Package Manager Service ready", e);
         }
 
+        Slog.i(TAG, "mDisplayManagerService.systemReady"); 
         try {
             // TODO: use boot phase and communicate these flags some other way
             mDisplayManagerService.systemReady(safeMode, mOnlyCore);
