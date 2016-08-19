@@ -666,19 +666,6 @@ public class DirectoryFragment extends Fragment {
         startActivity(intent);
     }
 
-	private void reMedioScan(DocumentInfo doc){
-		Context context = getActivity();
-		String scan_path = doc.derivedUri.toString();
-		String type = doc.getAuthority();
-		Log.v("yubo_wu", TAG + " --> type : " + type + ", scan_path : " + scan_path);
-		if("com.android.externalstorage.documents".equals(type)){
-			Log.e("yubo_wu", TAG + " --> setBroadcast : " + Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
-			Intent intent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, 
-				Uri.parse("file://" + scan_path)); 
-			intent.putExtra("package", "Documents");
-			context.sendBroadcast(intent);
-		}
-	}
     private void onDeleteDocuments(List<DocumentInfo> docs) {
         final Context context = getActivity();
         final ContentResolver resolver = context.getContentResolver();
@@ -704,7 +691,6 @@ public class DirectoryFragment extends Fragment {
             }
         }
 
-		reMedioScan(docs.get(0));
         if (hadTrouble) {
             Toast.makeText(context, R.string.toast_failed_delete, Toast.LENGTH_SHORT).show();
         }
@@ -727,7 +713,6 @@ public class DirectoryFragment extends Fragment {
                 break;
             }
         }
-		reMedioScan(docs.get(0));
         intent.putExtra(BaseActivity.DocumentsIntent.EXTRA_DIRECTORY_COPY, directoryCopy);
         startActivityForResult(intent, REQUEST_COPY_DESTINATION);
     }
