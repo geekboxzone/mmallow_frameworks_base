@@ -952,6 +952,7 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode,
         mLocationController = new LocationControllerImpl(mContext,
                 mHandlerThread.getLooper()); // will post a notification
         mBatteryController = new BatteryController(mContext);
+		mBatteryController.setPercentageView((TextView) mStatusBarWindow.findViewById(R.id.battery_percentage));
         mBatteryController.addStateChangedCallback(new BatteryStateChangeCallback() {
             @Override
             public void onPowerSaveChanged() {
