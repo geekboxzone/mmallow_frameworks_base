@@ -74,6 +74,7 @@ public class RecoverySystem {
     private static File UNCRYPT_FILE = new File(RECOVERY_DIR, "uncrypt_file");
     private static File LOG_FILE = new File(RECOVERY_DIR, "log");
     private static String LAST_PREFIX = "last_";
+    private static String RECOVERY_PREFIX = "Recovery_";
 
     // Length limits for reading files.
     private static int LOG_FILE_MAX_LENGTH = 64 * 1024;
@@ -502,10 +503,11 @@ public class RecoverySystem {
         }
 
         // Delete everything in RECOVERY_DIR except those beginning
-        // with LAST_PREFIX
+        // with LAST_PREFIX and RECOVERY_PREFIX
         String[] names = RECOVERY_DIR.list();
         for (int i = 0; names != null && i < names.length; i++) {
             if (names[i].startsWith(LAST_PREFIX)) continue;
+            if (names[i].startsWith(RECOVERY_PREFIX)) continue;
             File f = new File(RECOVERY_DIR, names[i]);
             if (!f.delete()) {
                 Log.e(TAG, "Can't delete: " + f);
