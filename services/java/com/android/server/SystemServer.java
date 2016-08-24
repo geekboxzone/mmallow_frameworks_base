@@ -460,7 +460,7 @@ public final class SystemServer {
         boolean disableNetwork = SystemProperties.getBoolean("config.disable_network", false);
         boolean disableNetworkTime = SystemProperties.getBoolean("config.disable_networktime", false);
         boolean isEmulator = SystemProperties.get("ro.kernel.qemu").equals("1");
-        boolean isBox = "box".equals(SystemProperties.get("ro.target.product"));
+        final boolean isBox = "box".equals(SystemProperties.get("ro.target.product"));
 
         try {
             Slog.i(TAG, "Reading configuration...");
@@ -469,17 +469,17 @@ public final class SystemServer {
             Slog.i(TAG, "Scheduling Policy");
             ServiceManager.addService("scheduling_policy", new SchedulingPolicyService());
 
-            mSystemServiceManager.startService(TelecomLoaderService.class);
-
             if(!isBox)
             {
+                 mSystemServiceManager.startService(TelecomLoaderService.class);
                  Slog.i(TAG, "Telephony Registry");
                  telephonyRegistry = new TelephonyRegistry(context);
                  ServiceManager.addService("telephony.registry", telephonyRegistry);
             }
 
+            /*//only for test ,no need to start
             Slog.i(TAG, "Entropy Mixer");
-            entropyMixer = new EntropyMixer(context);
+            entropyMixer = new EntropyMixer(context);*/
 
             mContentResolver = context.getContentResolver();
 
@@ -503,9 +503,12 @@ public final class SystemServer {
             Slog.i(TAG, "System Content Providers");
             mActivityManagerService.installSystemProviders();
 
-            Slog.i(TAG, "Vibrator Service");
-            vibrator = new VibratorService(context);
-            ServiceManager.addService("vibrator", vibrator);
+            if(!isBox)
+            {
+                 Slog.i(TAG, "Vibrator Service");
+                 vibrator = new VibratorService(context);
+                 ServiceManager.addService("vibrator", vibrator);
+            }
 
             Slog.i(TAG, "Consumer IR Service");
             consumerIr = new ConsumerIrService(context);
@@ -578,13 +581,15 @@ public final class SystemServer {
             } catch (Throwable e) {
                 reportWtf("starting Input Manager Service", e);
             }
-
-            try {
-                Slog.i(TAG, "Accessibility Manager");
-                ServiceManager.addService(Context.ACCESSIBILITY_SERVICE,
-                        new AccessibilityManagerService(context));
-            } catch (Throwable e) {
-                reportWtf("starting Accessibility Manager", e);
+            if(!isBox)    
+            {
+                 try {
+                     Slog.i(TAG, "Accessibility Manager");
+                     ServiceManager.addService(Context.ACCESSIBILITY_SERVICE,
+                             new AccessibilityManagerService(context));
+                 } catch (Throwable e) {
+                     reportWtf("starting Accessibility Manager", e);
+                 }
             }
         }
 
@@ -639,7 +644,7 @@ public final class SystemServer {
                     reportWtf("starting LockSettingsService service", e);
                 }
 
-                if (!SystemProperties.get(PERSISTENT_DATA_BLOCK_PROP).equals("")) {
+                if (!SystemProperties.get(PERSISTENT_DATA_BLOCK_PROP).equals("") && !isBox) {
                     mSystemServiceManager.startService(PersistentDataBlockService.class);
                 }
 
@@ -831,11 +836,11 @@ public final class SystemServer {
                     reportWtf("starting Search Service", e);
                 }
             }
-
+            
             try {
                 Slog.i(TAG, "DropBox Service");
                 ServiceManager.addService(Context.DROPBOX_SERVICE,
-                        new DropBoxManagerService(context, new File("/data/system/dropbox")));
+                new DropBoxManagerService(context, new File("/data/system/dropbox")));
             } catch (Throwable e) {
                 reportWtf("starting DropBoxManagerService", e);
             }
@@ -864,16 +869,19 @@ public final class SystemServer {
                 mSystemServiceManager.startService(DockObserver.class);
             }
 
-            try {
-                Slog.i(TAG, "Wired Accessory Manager");
-                // Listen for wired headset changes
-                inputManager.setWiredAccessoryCallbacks(
-                        new WiredAccessoryManager(context, inputManager));
-            } catch (Throwable e) {
-                reportWtf("starting WiredAccessoryManager", e);
+            if(!isBox)
+            {
+                 try {
+                     Slog.i(TAG, "Wired Accessory Manager");
+                     // Listen for wired headset changes
+                     inputManager.setWiredAccessoryCallbacks(
+                             new WiredAccessoryManager(context, inputManager));
+                 } catch (Throwable e) {
+                     reportWtf("starting WiredAccessoryManager", e);
+                 }
             }
 
-            if (!disableNonCoreServices) {
+            if (!disableNonCoreServices && !isBox) {
                 if (mPackageManager.hasSystemFeature(PackageManager.FEATURE_MIDI)) {
                     // Start MIDI Manager service
                     mSystemServiceManager.startService(MIDI_SERVICE_CLASS);
@@ -964,7 +972,7 @@ public final class SystemServer {
                 }
             }
 
-            if (!disableNonCoreServices) {
+            if (!disableNonCoreServices && !isBox) {
                 // Dreams (interactive idle-time views, a/k/a screen savers, and doze mode)
                 mSystemServiceManager.startService(DreamManagerService.class);
             }
@@ -1055,16 +1063,21 @@ public final class SystemServer {
         }
         Slog.i(TAG, "end detectSafeMode");
 
-        // MMS service broker
-        mmsService = mSystemServiceManager.startService(MmsServiceBroker.class);
+        if(!isBox)
+        {
+            // MMS service broker
+            mmsService = mSystemServiceManager.startService(MmsServiceBroker.class);
+        }
 
         // It is now time to start up the app processes...
-
-        Slog.i(TAG, "vibrator.systemReady");   
-        try {
-            vibrator.systemReady();
-        } catch (Throwable e) {
-            reportWtf("making Vibrator Service ready", e);
+        if(!isBox)
+        {
+             Slog.i(TAG, "vibrator.systemReady");   
+             try {
+                 vibrator.systemReady();
+             } catch (Throwable e) {
+                 reportWtf("making Vibrator Service ready", e);
+             }
         }
 
         Slog.i(TAG, "lockSettings.systemReady");   
@@ -1259,10 +1272,13 @@ public final class SystemServer {
                 } catch (Throwable e) {
                     reportWtf("Notifying InputManagerService running", e);
                 }
-                try {
-                    if (telephonyRegistryF != null) telephonyRegistryF.systemRunning();
-                } catch (Throwable e) {
-                    reportWtf("Notifying TelephonyRegistry running", e);
+                if(!isBox)
+                {
+                     try {
+                         if (telephonyRegistryF != null) telephonyRegistryF.systemRunning();
+                     } catch (Throwable e) {
+                         reportWtf("Notifying TelephonyRegistry running", e);
+                     }
                 }
                 try {
                     if (mediaRouterF != null) mediaRouterF.systemRunning();
@@ -1270,10 +1286,13 @@ public final class SystemServer {
                     reportWtf("Notifying MediaRouterService running", e);
                 }
 
-                try {
-                    if (mmsServiceF != null) mmsServiceF.systemRunning();
-                } catch (Throwable e) {
-                    reportWtf("Notifying MmsService running", e);
+                if(!isBox)
+                {
+                     try {
+                         if (mmsServiceF != null) mmsServiceF.systemRunning();
+                     } catch (Throwable e) {
+                         reportWtf("Notifying MmsService running", e);
+                     }
                 }
             }
         });
