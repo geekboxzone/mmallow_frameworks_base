@@ -22,6 +22,8 @@ import android.content.pm.PackageManager;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.MessageQueue;
+import android.os.SystemClock;
+import android.os.SystemProperties;
 import android.util.Log;
 import android.util.SparseArray;
 import android.util.SparseBooleanArray;
@@ -175,7 +177,7 @@ public class SystemSensorManager extends SensorManager {
                final int[] status = new int[1];
                final long timestamp[] = new long[1];
                Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_DISPLAY);
-
+			   
                synchronized (this) {
                    // we've open the driver, we're ready to open the sensors
                    mRemoteSensorReady = true;
@@ -295,7 +297,7 @@ private class ListenerDelegate {
 						}
 						break;
 				}
-
+				
 				mSensorEventListener.onSensorChanged(t);
 				sPool.returnToPool(t);
 			}
@@ -864,11 +866,15 @@ static private void updateRemoteSensorStatus(){
     static final class SensorEventQueue extends BaseEventQueue {
         private final SensorEventListener mListener;
         private final SparseArray<SensorEvent> mSensorsEvents = new SparseArray<SensorEvent>();
-
+        private long tm_min, tm_max, tm_sum, tm_count, tm_last_print;
+        private boolean tm_enable = false; 		
+	
         public SensorEventQueue(SensorEventListener listener, Looper looper,
                 SystemSensorManager manager, String packageName) {
             super(looper, manager, OPERATING_MODE_NORMAL, packageName);
             mListener = listener;
+            tm_min = tm_max = tm_sum = tm_count = tm_last_print = 0;
+            tm_enable = (0 != SystemProperties.getInt("sensor.debug.time", 0));
         }
 
         @Override
@@ -926,6 +932,23 @@ static private void updateRemoteSensorStatus(){
                 mListener.onAccuracyChanged(t.sensor, t.accuracy);
             }
             mListener.onSensorChanged(t);
+            if (tm_enable) {
+                long tm_cur = System.nanoTime(); //SystemClock.elapsedRealtimeNanos();
+                long tm_delay = tm_cur - t.timestamp;
+                if (tm_min==0 && tm_max==0)
+                    tm_min = tm_max = tm_delay;
+                else if (tm_delay < tm_min)
+                    tm_min = tm_delay;
+                else if (tm_delay > tm_max)
+                    tm_max = tm_delay;
+                tm_sum += tm_delay;
+                tm_count++;
+                if ((tm_cur-tm_last_print) > 1000000000) {
+                    Log.e(TAG, "Client Time: ["+sensor.getName()+"] "+tm_min+","+(tm_sum/tm_count)+","+tm_max);
+                    tm_last_print = tm_cur;
+                    tm_min = tm_max = tm_count = tm_sum = 0;
+                }
+            }
         }
 
         @SuppressWarnings("unused")
