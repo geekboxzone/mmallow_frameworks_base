@@ -99,6 +99,7 @@ import java.util.Locale;
 import java.util.Timer;
 import java.util.TimerTask;
 
+
 public final class SystemServer {
     private static final String TAG = "SystemServer";
 
@@ -291,6 +292,7 @@ public final class SystemServer {
         Looper.loop();
         throw new RuntimeException("Main thread loop unexpectedly exited");
     }
+
 
     private void reportWtf(String msg, Throwable e) {
         Slog.w(TAG, "***********************************************");
@@ -510,6 +512,7 @@ public final class SystemServer {
                  ServiceManager.addService("vibrator", vibrator);
             }
 
+
             Slog.i(TAG, "Consumer IR Service");
             consumerIr = new ConsumerIrService(context);
             ServiceManager.addService(Context.CONSUMER_IR_SERVICE, consumerIr);
@@ -571,7 +574,7 @@ public final class SystemServer {
         LockSettingsService lockSettings = null;
         AssetAtlasService atlas = null;
         MediaRouterService mediaRouter = null;
-
+        DeviceManagerService deviceService=null;
         // Bring up services needed for UI.
         if (mFactoryTestMode != FactoryTest.FACTORY_TEST_LOW_LEVEL) {
             try {
@@ -854,6 +857,16 @@ public final class SystemServer {
                 } catch (Throwable e) {
                     reportWtf("starting Wallpaper Service", e);
                 }
+            }
+
+            if(SystemProperties.get("ro.target.product").equals("tablet")) {
+               try{
+                  Slog.i(TAG,"DeviceManagerService");
+                  deviceService=new DeviceManagerService(context);
+                  ServiceManager.addService("device",deviceService);
+               }catch(Throwable e){
+                  reportWtf("starting device Service", e);
+               }
             }
 
             try {
@@ -1159,7 +1172,7 @@ public final class SystemServer {
         final MediaRouterService mediaRouterF = mediaRouter;
         final AudioService audioServiceF = audioService;
         final MmsServiceBroker mmsServiceF = mmsService;
-
+        final DeviceManagerService deviceF=deviceService;
         // We now tell the activity manager it is okay to run third party
         // code.  It will call back into us once it has gotten to the state
         // where third party code can really run (but before it has actually
@@ -1228,6 +1241,15 @@ public final class SystemServer {
                 } catch (Throwable e) {
                     reportWtf("Notifying WallpaperService running", e);
                 }
+
+                if(SystemProperties.get("ro.target.product").equals("tablet")) {
+                   try {
+                        if (deviceF != null) deviceF.systemRunning();
+                    } catch (Throwable e) {
+                        reportWtf("Notifying deviceService running", e);
+                    }
+                }
+
                 try {
                     if (immF != null) immF.systemRunning(statusBarF);
                 } catch (Throwable e) {

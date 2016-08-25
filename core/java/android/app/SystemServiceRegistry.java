@@ -120,7 +120,7 @@ import android.view.inputmethod.InputMethodManager;
 import android.view.textservice.TextServicesManager;
 
 import java.util.HashMap;
-
+import android.os.SystemProperties;
 /**
  * Manages all of the system services that can be returned by {@link Context#getSystemService}.
  * Used by {@link ContextImpl}.
@@ -715,6 +715,17 @@ final class SystemServiceRegistry {
             public RadioManager createService(ContextImpl ctx) {
                 return new RadioManager(ctx);
             }});
+        
+        if(SystemProperties.get("ro.target.product").equals("tablet")) {
+          registerService("device", DeviceManager.class,
+                new CachedServiceFetcher<DeviceManager>() {
+                    @Override
+                    public DeviceManager createService(ContextImpl ctx) {
+                        IBinder b = ServiceManager.getService("device");
+                        IDeviceManager service = IDeviceManager.Stub.asInterface(b);
+                        return new DeviceManager(service, ctx.mMainThread.getHandler());
+                    }});
+        }
     }
 
     /**

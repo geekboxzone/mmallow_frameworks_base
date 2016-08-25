@@ -139,6 +139,7 @@ import static android.view.WindowManagerPolicy.WindowManagerFuncs.CAMERA_LENS_CO
 import static android.view.WindowManagerPolicy.WindowManagerFuncs.CAMERA_LENS_UNCOVERED;
 import static android.view.WindowManagerPolicy.WindowManagerFuncs.CAMERA_LENS_COVERED;
 
+import android.app.DeviceManager;
 /**
  * WindowManagerPolicy implementation for the Android phone UI.  This
  * introduces a new method suffix, Lp, for an internal lock of the
@@ -5630,8 +5631,14 @@ public class PhoneWindowManager implements WindowManagerPolicy {
             if (mKeyguardDelegate != null) {
                 mKeyguardDelegate.onScreenTurnedOff();
             }
+            if(SystemProperties.get("ro.target.product").equals("tablet")) {
+              DeviceManager mDeviceManager=(DeviceManager)mContext.getSystemService("device");
+              mDeviceManager.update("screen","off",1);
+            }
         }
+        
     }
+
 
     // Called on the DisplayManager's DisplayPowerController thread.
     @Override
@@ -5655,6 +5662,10 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                         "null mKeyguardDelegate: setting mKeyguardDrawComplete.");
                 finishKeyguardDrawn();
             }
+        }
+        if(SystemProperties.get("ro.target.product").equals("tablet")) {
+           DeviceManager mDeviceManager=(DeviceManager)mContext.getSystemService("device");
+           mDeviceManager.update("screen","on",1);
         }
     }
 
