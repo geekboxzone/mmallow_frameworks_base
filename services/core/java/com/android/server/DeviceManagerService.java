@@ -80,8 +80,8 @@ public class DeviceManagerService extends IDeviceManager.Stub {
     public void systemRunning() {
         //VideoFileObserver mObserver = new VideoFileObserver("/data/system");
         parseConfig();
-        mObserver = new VideoFileObserver("/data/video");
-        mObserver.startWatching();
+       // mObserver = new VideoFileObserver("/data/video");
+       // mObserver.startWatching();
         Slog.d(TAG,"videoStartMinFreq="+videoStartMinFreq+" videoStopMinFreq="+videoStopMinFreq+" videoPauseMinFreq="+videoPauseMinFreq+" screenOnMinFreq"+screenOnMinFreq+" screenOffMinFreq="+screenOffMinFreq+" video2kMinFreq="+video2kMinFreq);
     }
 
@@ -104,15 +104,31 @@ public class DeviceManagerService extends IDeviceManager.Stub {
             } else if (value.equals("off")) {
                 setDDRMinFreq(screenOffMinFreq);
             }
+        }else if(name.equals("video")){
+            String videoState=value.split(":")[0];
+            int width=Integer.valueOf(value.split(":")[1]);
+            int height=Integer.valueOf(value.split(":")[2]);
+            if (videoState.equals("start")) {
+                if(width>2000&&height>2000){
+                    setDDRMinFreq(video2kMinFreq);
+                }else{
+                    setDDRMinFreq(videoStartMinFreq);
+                }
+            } else if (videoState.equals("pause")) {
+                setDDRMinFreq(videoPauseMinFreq);
+            } else if (videoState.equals("stop")) {
+                setDDRMinFreq(videoStopMinFreq);
+            }
         }
         return 1;
     }
 
     private void setDDRMinFreq(String freq) {
+        handler.removeMessages(SET_MIN_FREQ);
         if(curMinFreq>Integer.valueOf(freq)){
              //handler.sendMessage(handler.obtainMessage(SET_MIN_FREQ,Integer.valueOf(freq),0));
             Slog.d(TAG, "delay set DDR min_freq " + freq);
-            handler.sendMessageDelayed(handler.obtainMessage(SET_MIN_FREQ,Integer.valueOf(freq),0),1000);
+            handler.sendMessageDelayed(handler.obtainMessage(SET_MIN_FREQ,Integer.valueOf(freq),0),2000);
         }else{
             handler.sendMessage(handler.obtainMessage(SET_MIN_FREQ,Integer.valueOf(freq),0));
         }

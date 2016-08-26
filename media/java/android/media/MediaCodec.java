@@ -25,8 +25,11 @@ import android.graphics.SurfaceTexture;
 import android.media.MediaCodecInfo.CodecCapabilities;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
+import android.os.ServiceManager;
+import android.os.SystemProperties;
 import android.view.Surface;
 
 import java.io.IOException;
@@ -38,7 +41,9 @@ import java.nio.ReadOnlyBufferException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-
+import android.app.IDeviceManager;
+import android.os.RemoteException;
+import android.util.Log;
 /**
  MediaCodec class can be used to access low-level media codecs, i.e. encoder/decoder components.
  It is part of the Android low-level multimedia support infrastructure (normally used together
@@ -1489,6 +1494,7 @@ final public class MediaCodec {
     private static final int CB_ERROR = 3;
     private static final int CB_OUTPUT_FORMAT_CHANGE = 4;
 
+    private IDeviceManager mDeviceManager;
     private class EventHandler extends Handler {
         private MediaCodec mCodec;
 
@@ -1666,7 +1672,10 @@ final public class MediaCodec {
         mOnFrameRenderedHandler = mEventHandler;
 
         mBufferLock = new Object();
-
+        if (SystemProperties.get("ro.target.product").equals("tablet")) {
+         IBinder binder = ServiceManager.getService("device");
+         mDeviceManager = IDeviceManager.Stub.asInterface(binder);
+        }
         native_setup(name, nameIsType, encoder);
     }
 
@@ -1882,6 +1891,15 @@ final public class MediaCodec {
      * for start may be attributed to future method calls.
      */
     public final void start() {
+     if (SystemProperties.get("ro.target.product").equals("tablet")) {
+       try{
+          int width=getInputFormat().getInteger(MediaFormat.KEY_WIDTH);
+          int height=getInputFormat().getInteger(MediaFormat.KEY_HEIGHT);
+          mDeviceManager.update("video", "start:"+width+":"+height, 1);
+       }catch(RemoteException e){
+              Log.d("MediaCodec","update exception "+e);     
+       }  
+     }
         native_start();
         synchronized(mBufferLock) {
             cacheBuffers(true /* input */);
@@ -1910,6 +1928,15 @@ final public class MediaCodec {
                 mOnFrameRenderedHandler.removeMessages(EVENT_FRAME_RENDERED);
             }
         }
+     if (SystemProperties.get("ro.target.product").equals("tablet")) {
+      try{
+          int width=getInputFormat().getInteger(MediaFormat.KEY_WIDTH);
+          int height=getInputFormat().getInteger(MediaFormat.KEY_HEIGHT);
+          mDeviceManager.update("video", "stop:"+width+":"+height, 1);
+      }catch(RemoteException e){
+             Log.d("MediaCodec","update exception "+e);     
+      }  
+     }
     }
 
     private native final void native_stop();

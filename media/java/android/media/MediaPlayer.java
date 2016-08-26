@@ -36,6 +36,7 @@ import android.os.Process;
 import android.os.PowerManager;
 import android.os.RemoteException;
 import android.os.ServiceManager;
+import android.os.SystemProperties;
 import android.provider.Settings;
 import android.system.ErrnoException;
 import android.system.OsConstants;
@@ -80,7 +81,8 @@ import java.util.Vector;
 import java.lang.ref.WeakReference;
 import android.os.SystemProperties;
 import android.media.iso.ISOManager;
-
+import android.app.IDeviceManager;
+import android.os.RemoteException;
 /**
  * MediaPlayer class can be used to control playback
  * of audio/video files and streams. An example on how to use the methods in
@@ -620,6 +622,8 @@ public class MediaPlayer implements SubtitleController.Listener
     private int mUsage = -1;
     private boolean mBypassInterruptionPolicy;
 
+    private IDeviceManager mDeviceManager;
+
     /**
      * Default constructor. Consider using one of the create() methods for
      * synchronously instantiating a MediaPlayer from a Uri or resource.
@@ -643,6 +647,10 @@ public class MediaPlayer implements SubtitleController.Listener
         IBinder b = ServiceManager.getService(Context.APP_OPS_SERVICE);
         mAppOps = IAppOpsService.Stub.asInterface(b);
 
+        if (SystemProperties.get("ro.target.product").equals("tablet")) {
+            IBinder binder = ServiceManager.getService("device");
+            mDeviceManager = IDeviceManager.Stub.asInterface(binder);
+        }
         /* Native setup requires a weak reference to our object.
          * It's easier to create it here than in C++.
          */
@@ -1361,6 +1369,13 @@ public class MediaPlayer implements SubtitleController.Listener
      * @throws IllegalStateException if it is called in an invalid state
      */
     public void start() throws IllegalStateException {
+        if (SystemProperties.get("ro.target.product").equals("tablet")) {
+            try{
+             mDeviceManager.update("video", "start:"+getVideoWidth()+":"+getVideoHeight(), 1);
+            }catch(RemoteException e){
+              Log.d(TAG,"update exception "+e);             
+            }
+        }
         if (isRestricted()) {
             _setVolume(0, 0);
         }
@@ -1403,6 +1418,13 @@ public class MediaPlayer implements SubtitleController.Listener
     public void stop() throws IllegalStateException {
         stayAwake(false);
         _stop();
+        if (SystemProperties.get("ro.target.product").equals("tablet")) {
+            try{
+             mDeviceManager.update("video", "stop:"+getVideoWidth()+":"+getVideoHeight(), 1);
+            }catch(RemoteException e){
+              Log.d(TAG,"update exception "+e);     
+            }  
+        }
     }
 
     private native void _stop() throws IllegalStateException;
@@ -1416,6 +1438,13 @@ public class MediaPlayer implements SubtitleController.Listener
     public void pause() throws IllegalStateException {
         stayAwake(false);
         _pause();
+        if (SystemProperties.get("ro.target.product").equals("tablet")) {
+            try{
+             mDeviceManager.update("video", "pause:"+getVideoWidth()+":"+getVideoHeight(), 1);
+            }catch(RemoteException e){
+              Log.d(TAG,"update exception "+e);     
+            }  
+        }
     }
 
     private native void _pause() throws IllegalStateException;
