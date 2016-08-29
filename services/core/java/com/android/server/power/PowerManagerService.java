@@ -703,7 +703,25 @@ public final class PowerManagerService extends SystemService
                 UserHandle.USER_CURRENT);
         if (oldScreenBrightnessSetting != mScreenBrightnessSetting) {
             mTemporaryScreenBrightnessSettingOverride = -1;
-        }
+            if (SystemProperties.get("ro.target.product").equals("tablet")) {
+		    Slog.d(TAG,"oldScreenBrightnessSetting="+oldScreenBrightnessSetting+"  mScreenBrightnessSetting="+mScreenBrightnessSetting);
+		    int lowBrightness=SystemProperties.getInt("ro.config.low_brightness",120);
+		    if(mScreenBrightnessSetting<=lowBrightness&&oldScreenBrightnessSetting>lowBrightness
+				    &&SystemProperties.get("persist.sys.cabc_status","0").equals("1")){
+			    Intent intent=new Intent();
+			    intent.setAction("android.intent.action.CABC_CHANGE");
+			    intent.putExtra("cabc_change", false);
+			    mContext.sendBroadcast(intent);
+		    }else if(mScreenBrightnessSetting>lowBrightness&&oldScreenBrightnessSetting<=lowBrightness
+				    &&SystemProperties.get("persist.sys.cabc_status","0").equals("1"))
+		    {
+			    Intent intent=new Intent();
+			    intent.setAction("android.intent.action.CABC_CHANGE");
+			    intent.putExtra("cabc_change", true);
+			    mContext.sendBroadcast(intent);
+		    }
+	    }
+	}
 
         final float oldScreenAutoBrightnessAdjustmentSetting =
                 mScreenAutoBrightnessAdjustmentSetting;
