@@ -63,7 +63,7 @@ public class MtpDatabase {
     // where arguments for restricting queries to files in mSubDirectories
     private String[] mSubDirectoriesWhereArgs;
 
-    private final HashMap<String, MtpStorage> mStorageMap = new HashMap<String, MtpStorage>();
+    private static HashMap<String, MtpStorage> mStorageMap = new HashMap<String, MtpStorage>();
 
     // cached property groups for single properties
     private final HashMap<Integer, MtpPropertyGroup> mPropertyGroupsByProperty

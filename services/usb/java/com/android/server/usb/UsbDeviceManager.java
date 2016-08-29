@@ -437,7 +437,7 @@ public class UsbDeviceManager {
             mOldUsbDataUnlocked = enable;
             updateUsbNotification();
             updateUsbStateBroadcast();
-            setEnabledFunctions(mCurrentFunctions, true);
+            setEnabledFunctions(mCurrentFunctions, false);
         }
 
         private void setAdbEnabled(boolean enable) {
@@ -718,7 +718,7 @@ public class UsbDeviceManager {
                     break;
                 case MSG_BOOT_COMPLETED:
                     mBootCompleted = true;
-                    setEnabledFunctions(getDefaultFunctions(),true);
+                    setEnabledFunctions(getDefaultFunctions(),false);
                     setUsbDataUnlocked(true);
                     if (mCurrentAccessory != null) {
                         getCurrentSettings().accessoryAttached(mCurrentAccessory);
