@@ -2,8 +2,12 @@
 package com.android.server;
 
 import android.app.IDeviceManager;
+import android.content.BroadcastReceiver;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Handler;
 import android.os.Message;
+import android.os.PowerManager;
 import android.util.Log;
 import android.content.Context;
 
@@ -46,28 +50,31 @@ public class DeviceManagerService extends IDeviceManager.Stub {
     private String screenOnMinFreq="400000000";
     private String screenOffMinFreq="200000000";
     private String video2kMinFreq="600000000";
+    private String performanceMinFreq="800000000";
     private int curMinFreq=400000000;
     private static final int SET_MIN_FREQ=1;
+    private static final int SET_GOVERNOR=2;
+    private static final int PERFORMANCE=3;
+    private static final int SIMPLE_ONDEMAND=4;
     private Handler handler=new Handler(){
         @Override
         public void handleMessage(Message msg) {
-            int minFreq=msg.arg1;
-            curMinFreq=minFreq;
-            Slog.d(TAG,"set ddr min freq="+curMinFreq);
-            File f = new File("sys/bus/platform/drivers/rk3399-dmc-freq/dmc/devfreq/dmc/min_freq");
-            OutputStream output = null;
-            OutputStreamWriter outputWrite = null;
-            PrintWriter print = null;
-            try {
-                output = new FileOutputStream(f);
-                outputWrite = new OutputStreamWriter(output);
-                print = new PrintWriter(outputWrite);
-                print.print(String.valueOf(minFreq));
-                print.flush();
-                output.close();
-            } catch (Exception e) {
-                e.printStackTrace();
+            switch(msg.what){
+                case SET_MIN_FREQ:
+                    int minFreq=msg.arg1;
+                    curMinFreq=minFreq;
+                    Slog.d(TAG,"set ddr min freq="+curMinFreq);
+                    File minFreqFile = new File("sys/bus/platform/drivers/rk3399-dmc-freq/dmc/devfreq/dmc/min_freq");
+                    setDmcValue(minFreqFile,String.valueOf(minFreq));
+                    break;
+                case SET_GOVERNOR:;
+                    File governorFile = new File("sys/bus/platform/drivers/rk3399-dmc-freq/dmc/devfreq/dmc/governor");
+                    String value=msg.arg1==PERFORMANCE?"performance":"simple_ondemand";
+                    Slog.d(TAG,"set governor="+value);
+                    setDmcValue(governorFile,value);
+                    break;
             }
+
         }
     };
 
@@ -80,11 +87,31 @@ public class DeviceManagerService extends IDeviceManager.Stub {
     public void systemRunning() {
         //VideoFileObserver mObserver = new VideoFileObserver("/data/system");
         parseConfig();
+        IntentFilter filter=new IntentFilter();
+        filter.addAction(PowerManager.ACTION_PERFORMANCE_MODE_CHANGED);
+        mContext.registerReceiver(receiver, filter);
        // mObserver = new VideoFileObserver("/data/video");
        // mObserver.startWatching();
         Slog.d(TAG,"videoStartMinFreq="+videoStartMinFreq+" videoStopMinFreq="+videoStopMinFreq+" videoPauseMinFreq="+videoPauseMinFreq+" screenOnMinFreq"+screenOnMinFreq+" screenOffMinFreq="+screenOffMinFreq+" video2kMinFreq="+video2kMinFreq);
     }
 
+    private BroadcastReceiver receiver=new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action=intent.getAction();
+            if(PowerManager.ACTION_PERFORMANCE_MODE_CHANGED.equals(action)){
+                int mode = intent.getIntExtra(PowerManager.EXTRA_PERFORMANCE_MODE, PowerManager.PERFORMANCE_MODE_NORMAL);
+                Log.d(TAG,"action="+action+" mode="+mode);
+                if(mode==PowerManager.PERFORMANCE_MODE_NORMAL){
+                    //handler.removeMessages(SET_MIN_FREQ);
+                    handler.sendMessage(handler.obtainMessage(SET_GOVERNOR,SIMPLE_ONDEMAND,0));
+                }else{
+                    //handler.removeMessages(SET_MIN_FREQ);
+                    handler.sendMessage(handler.obtainMessage(SET_GOVERNOR,PERFORMANCE,0));
+                }
+            }
+        }
+    };
     /**
      * @hide
      */
@@ -121,6 +148,22 @@ public class DeviceManagerService extends IDeviceManager.Stub {
             }
         }
         return 1;
+    }
+
+    private void setDmcValue(File file,String value){
+        OutputStream output = null;
+        OutputStreamWriter outputWrite = null;
+        PrintWriter print = null;
+        try {
+            output = new FileOutputStream(file);
+            outputWrite = new OutputStreamWriter(output);
+            print = new PrintWriter(outputWrite);
+            print.print(value);
+            print.flush();
+            output.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private void setDDRMinFreq(String freq) {
