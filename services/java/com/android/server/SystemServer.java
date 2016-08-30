@@ -894,17 +894,17 @@ public final class SystemServer {
                  }
             }
 
+			if (mPackageManager.hasSystemFeature(PackageManager.FEATURE_USB_HOST)
+				|| mPackageManager.hasSystemFeature(
+						PackageManager.FEATURE_USB_ACCESSORY)) {
+				// Manage USB host and device support
+				 mSystemServiceManager.startService(USB_SERVICE_CLASS);
+			}
+
             if (!disableNonCoreServices && !isBox) {
                 if (mPackageManager.hasSystemFeature(PackageManager.FEATURE_MIDI)) {
                     // Start MIDI Manager service
                     mSystemServiceManager.startService(MIDI_SERVICE_CLASS);
-                }
-
-                if (mPackageManager.hasSystemFeature(PackageManager.FEATURE_USB_HOST)
-                        || mPackageManager.hasSystemFeature(
-                                PackageManager.FEATURE_USB_ACCESSORY)) {
-                    // Manage USB host and device support
-                    mSystemServiceManager.startService(USB_SERVICE_CLASS);
                 }
 
                 try {
