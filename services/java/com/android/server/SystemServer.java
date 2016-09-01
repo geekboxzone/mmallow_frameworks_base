@@ -859,7 +859,7 @@ public final class SystemServer {
                 }
             }
 
-            if(SystemProperties.get("ro.target.product").equals("tablet")) {
+            if(SystemProperties.get("ro.target.product").equals("tablet")&&SystemProperties.get("ro.board.platform").equals("rk3399")) {
                try{
                   Slog.i(TAG,"DeviceManagerService");
                   deviceService=new DeviceManagerService(context);
@@ -1242,7 +1242,7 @@ public final class SystemServer {
                     reportWtf("Notifying WallpaperService running", e);
                 }
 
-                if(SystemProperties.get("ro.target.product").equals("tablet")) {
+                if(SystemProperties.get("ro.target.product").equals("tablet")&&SystemProperties.get("ro.board.platform").equals("rk3399")) {
                    try {
                         if (deviceF != null) deviceF.systemRunning();
                     } catch (Throwable e) {

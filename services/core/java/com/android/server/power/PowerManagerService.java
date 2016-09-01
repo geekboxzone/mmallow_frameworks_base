@@ -705,7 +705,7 @@ public final class PowerManagerService extends SystemService
                 UserHandle.USER_CURRENT);
         if (oldScreenBrightnessSetting != mScreenBrightnessSetting) {
             mTemporaryScreenBrightnessSettingOverride = -1;
-            if (SystemProperties.get("ro.target.product").equals("tablet")) {
+            if (SystemProperties.get("ro.target.product").equals("tablet")&&SystemProperties.get("ro.board.platform").equals("rk3399")) {
 		    Slog.d(TAG,"oldScreenBrightnessSetting="+oldScreenBrightnessSetting+"  mScreenBrightnessSetting="+mScreenBrightnessSetting);
 		    int lowBrightness=SystemProperties.getInt("ro.config.low_brightness",120);
 		    if(mScreenBrightnessSetting<=lowBrightness&&oldScreenBrightnessSetting>lowBrightness

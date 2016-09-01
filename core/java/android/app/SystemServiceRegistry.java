@@ -716,7 +716,7 @@ final class SystemServiceRegistry {
                 return new RadioManager(ctx);
             }});
         
-        if(SystemProperties.get("ro.target.product").equals("tablet")) {
+        if(SystemProperties.get("ro.target.product").equals("tablet")&&SystemProperties.get("ro.board.platform").equals("rk3399")) {
           registerService("device", DeviceManager.class,
                 new CachedServiceFetcher<DeviceManager>() {
                     @Override

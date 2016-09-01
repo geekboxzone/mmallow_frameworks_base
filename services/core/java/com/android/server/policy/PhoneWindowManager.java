@@ -5631,7 +5631,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
             if (mKeyguardDelegate != null) {
                 mKeyguardDelegate.onScreenTurnedOff();
             }
-            if(SystemProperties.get("ro.target.product").equals("tablet")) {
+            if(SystemProperties.get("ro.target.product").equals("tablet")&&SystemProperties.get("ro.board.platform").equals("rk3399")) {
               DeviceManager mDeviceManager=(DeviceManager)mContext.getSystemService("device");
               mDeviceManager.update("screen","off",1);
             }
@@ -5663,7 +5663,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                 finishKeyguardDrawn();
             }
         }
-        if(SystemProperties.get("ro.target.product").equals("tablet")) {
+        if(SystemProperties.get("ro.target.product").equals("tablet")&&SystemProperties.get("ro.board.platform").equals("rk3399")) {
            DeviceManager mDeviceManager=(DeviceManager)mContext.getSystemService("device");
            mDeviceManager.update("screen","on",1);
         }

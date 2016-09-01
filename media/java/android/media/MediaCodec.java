@@ -1672,7 +1672,7 @@ final public class MediaCodec {
         mOnFrameRenderedHandler = mEventHandler;
 
         mBufferLock = new Object();
-        if (SystemProperties.get("ro.target.product").equals("tablet")) {
+        if (SystemProperties.get("ro.target.product").equals("tablet")&&SystemProperties.get("ro.board.platform").equals("rk3399")) {
          IBinder binder = ServiceManager.getService("device");
          mDeviceManager = IDeviceManager.Stub.asInterface(binder);
         }
@@ -1891,7 +1891,7 @@ final public class MediaCodec {
      * for start may be attributed to future method calls.
      */
     public final void start() {
-     if (SystemProperties.get("ro.target.product").equals("tablet")) {
+     if (SystemProperties.get("ro.target.product").equals("tablet")&&SystemProperties.get("ro.board.platform").equals("rk3399")) {
        try{
           int width=getInputFormat().getInteger(MediaFormat.KEY_WIDTH);
           int height=getInputFormat().getInteger(MediaFormat.KEY_HEIGHT);
@@ -1928,7 +1928,7 @@ final public class MediaCodec {
                 mOnFrameRenderedHandler.removeMessages(EVENT_FRAME_RENDERED);
             }
         }
-     if (SystemProperties.get("ro.target.product").equals("tablet")) {
+     if (SystemProperties.get("ro.target.product").equals("tablet")&&SystemProperties.get("ro.board.platform").equals("rk3399")) {
       try{
           int width=getInputFormat().getInteger(MediaFormat.KEY_WIDTH);
           int height=getInputFormat().getInteger(MediaFormat.KEY_HEIGHT);

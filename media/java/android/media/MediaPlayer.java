@@ -647,7 +647,7 @@ public class MediaPlayer implements SubtitleController.Listener
         IBinder b = ServiceManager.getService(Context.APP_OPS_SERVICE);
         mAppOps = IAppOpsService.Stub.asInterface(b);
 
-        if (SystemProperties.get("ro.target.product").equals("tablet")) {
+        if (SystemProperties.get("ro.target.product").equals("tablet")&&SystemProperties.get("ro.board.platform").equals("rk3399")) {
             IBinder binder = ServiceManager.getService("device");
             mDeviceManager = IDeviceManager.Stub.asInterface(binder);
         }
@@ -1369,7 +1369,7 @@ public class MediaPlayer implements SubtitleController.Listener
      * @throws IllegalStateException if it is called in an invalid state
      */
     public void start() throws IllegalStateException {
-        if (SystemProperties.get("ro.target.product").equals("tablet")) {
+        if (SystemProperties.get("ro.target.product").equals("tablet")&&SystemProperties.get("ro.board.platform").equals("rk3399")) {
             try{
              mDeviceManager.update("video", "start:"+getVideoWidth()+":"+getVideoHeight(), 1);
             }catch(RemoteException e){
@@ -1418,7 +1418,7 @@ public class MediaPlayer implements SubtitleController.Listener
     public void stop() throws IllegalStateException {
         stayAwake(false);
         _stop();
-        if (SystemProperties.get("ro.target.product").equals("tablet")) {
+        if (SystemProperties.get("ro.target.product").equals("tablet")&&SystemProperties.get("ro.board.platform").equals("rk3399")) {
             try{
              mDeviceManager.update("video", "stop:"+getVideoWidth()+":"+getVideoHeight(), 1);
             }catch(RemoteException e){
@@ -1438,7 +1438,7 @@ public class MediaPlayer implements SubtitleController.Listener
     public void pause() throws IllegalStateException {
         stayAwake(false);
         _pause();
-        if (SystemProperties.get("ro.target.product").equals("tablet")) {
+        if (SystemProperties.get("ro.target.product").equals("tablet")&&SystemProperties.get("ro.board.platform").equals("rk3399")) {
             try{
              mDeviceManager.update("video", "pause:"+getVideoWidth()+":"+getVideoHeight(), 1);
             }catch(RemoteException e){
