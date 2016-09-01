@@ -1898,6 +1898,8 @@ final public class MediaCodec {
           mDeviceManager.update("video", "start:"+width+":"+height, 1);
        }catch(RemoteException e){
               Log.d("MediaCodec","update exception "+e);     
+       }catch (IllegalStateException e) {
+              Log.d("MediaCodec","update exception "+e);
        }  
      }
         native_start();
@@ -1935,7 +1937,9 @@ final public class MediaCodec {
           mDeviceManager.update("video", "stop:"+width+":"+height, 1);
       }catch(RemoteException e){
              Log.d("MediaCodec","update exception "+e);     
-      }  
+      }catch (IllegalStateException e) {
+             Log.d("MediaCodec","update exception "+e);
+      }
      }
     }
 
