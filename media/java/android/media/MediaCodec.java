@@ -1900,6 +1900,10 @@ final public class MediaCodec {
               Log.d("MediaCodec","update exception "+e);     
        }catch (IllegalStateException e) {
               Log.d("MediaCodec","update exception "+e);
+       }catch (NullPointerException e) {
+              Log.d("MediaCodec","update exception "+e);
+       }catch (Exception e){
+              Log.i("MediaCodec",e.getMessage());
        }  
      }
         native_start();
@@ -1939,6 +1943,10 @@ final public class MediaCodec {
              Log.d("MediaCodec","update exception "+e);     
       }catch (IllegalStateException e) {
              Log.d("MediaCodec","update exception "+e);
+      }catch (NullPointerException e) {
+             Log.d("MediaCodec","update exception "+e);
+      }catch (Exception e){
+             Log.i("MediaCodec",e.getMessage());
       }
      }
     }
