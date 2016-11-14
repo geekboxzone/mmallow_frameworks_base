@@ -6693,6 +6693,10 @@ public class WindowManagerService extends IWindowManager.Stub
         if("true".equals(SystemProperties.get("persist.display.portrait","false"))){
              rotation = Surface.ROTATION_90;
         }
+
+		if ("box".equals(SystemProperties.get("ro.target.product","tablet")))
+			rotation = Surface.ROTATION_0;
+
         /* display portrait end */
 
         // if("vr".equals(SystemProperties.get("ro.target.product","tablet")))
