@@ -244,6 +244,23 @@ android_media_AudioTrack_setup(JNIEnv *env, jobject thiz, jobject weak_this,
         return (jint) AUDIOTRACK_ERROR_SETUP_INVALIDFORMAT;
     }
 
+    bool afPCM = true;
+    // check the format is pcm
+    if ((format != AUDIO_FORMAT_PCM_8_BIT) && (format != AUDIO_FORMAT_PCM_16_BIT)) {
+        if (format == AUDIO_FORMAT_AC3 ||
+            format == AUDIO_FORMAT_E_AC3 ||
+            format == AUDIO_FORMAT_DTS ||
+            format == AUDIO_FORMAT_DTS_HD ||
+            format == AUDIO_FORMAT_IEC61937) {
+            afPCM = false;
+            format = AUDIO_FORMAT_PCM_16_BIT;
+         } else {
+             ALOGE("Error creating Audiotrack: unsupported audio format!");
+         }
+    } else {
+        afPCM = true;  
+    }
+
     // compute the frame count
     size_t frameCount;
     if (audio_is_linear_pcm(format)) {
@@ -301,6 +318,7 @@ android_media_AudioTrack_setup(JNIEnv *env, jobject thiz, jobject weak_this,
     lpJniStorage->mCallbackData.audioTrack_ref = env->NewGlobalRef(weak_this);
     lpJniStorage->mCallbackData.busy = false;
 
+    audio_output_flags_t flag = afPCM ? AUDIO_OUTPUT_FLAG_NONE : AUDIO_OUTPUT_FLAG_DIRECT;
     // initialize the native AudioTrack object
     status_t status = NO_ERROR;
     switch (memoryMode) {
@@ -312,7 +330,7 @@ android_media_AudioTrack_setup(JNIEnv *env, jobject thiz, jobject weak_this,
                 format,// word length, PCM
                 nativeChannelMask,
                 frameCount,
-                AUDIO_OUTPUT_FLAG_NONE,
+                flag,
                 audioCallback, &(lpJniStorage->mCallbackData),//callback, callback data (user)
                 0,// notificationFrames == 0 since not using EVENT_MORE_DATA to feed the AudioTrack
                 0,// shared mem
@@ -338,7 +356,7 @@ android_media_AudioTrack_setup(JNIEnv *env, jobject thiz, jobject weak_this,
                 format,// word length, PCM
                 nativeChannelMask,
                 frameCount,
-                AUDIO_OUTPUT_FLAG_NONE,
+                flag,
                 audioCallback, &(lpJniStorage->mCallbackData),//callback, callback data (user));
                 0,// notificationFrames == 0 since not using EVENT_MORE_DATA to feed the AudioTrack
                 lpJniStorage->mMemBase,// shared mem

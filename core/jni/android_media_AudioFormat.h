@@ -31,9 +31,9 @@
 #define ENCODING_AAC_LC     10
 #define ENCODING_AAC_HE_V1  11
 #define ENCODING_AAC_HE_V2  12
+#define ENCODING_IEC61937   20
 #define ENCODING_INVALID    0
 #define ENCODING_DEFAULT    1
-
 
 
 #define CHANNEL_INVALID 0
@@ -64,6 +64,8 @@ static inline audio_format_t audioFormatToNative(int audioFormat)
         return AUDIO_FORMAT_AAC_HE_V1;
     case ENCODING_AAC_HE_V2:
         return AUDIO_FORMAT_AAC_HE_V2;
+    case ENCODING_IEC61937:
+        return AUDIO_FORMAT_IEC61937;
     case ENCODING_DEFAULT:
         return AUDIO_FORMAT_DEFAULT;
     default:

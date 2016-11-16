@@ -252,6 +252,9 @@ public class AudioFormat {
      * */
     public static final int ENCODING_AAC_HE_V2 = 12;
 
+    /** Audio data format: ENCODING_IEC61937*/
+    public static final int ENCODING_IEC61937 = 20;
+    
     /** Invalid audio channel configuration */
     /** @deprecated Use {@link #CHANNEL_INVALID} instead.  */
     @Deprecated    public static final int CHANNEL_CONFIGURATION_INVALID   = 0;
@@ -443,6 +446,7 @@ public class AudioFormat {
         case ENCODING_AAC_LC:
         case ENCODING_AAC_HE_V1:
         case ENCODING_AAC_HE_V2:
+        case ENCODING_IEC61937:
             return true;
         default:
             return false;
@@ -460,6 +464,7 @@ public class AudioFormat {
         case ENCODING_E_AC3:
         case ENCODING_DTS:
         case ENCODING_DTS_HD:
+        case ENCODING_IEC61937:
             return true;
         default:
             return false;
@@ -483,6 +488,7 @@ public class AudioFormat {
         case ENCODING_AAC_LC:
         case ENCODING_AAC_HE_V1:
         case ENCODING_AAC_HE_V2:
+        case ENCODING_IEC61937:
             return false;
         case ENCODING_INVALID:
         default:
@@ -715,6 +721,7 @@ public class AudioFormat {
                 case ENCODING_E_AC3:
                 case ENCODING_DTS:
                 case ENCODING_DTS_HD:
+                case ENCODING_IEC61937:
                     mEncoding = encoding;
                     break;
                 case ENCODING_INVALID:
